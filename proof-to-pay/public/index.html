@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-900">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proof-to-Pay — AI Scope &amp; PayPal Invoicing Assistant for Freelancers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-grid.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-quartz.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .ag-theme-quartz {
+      --ag-font-family: 'Inter', system-ui, sans-serif;
+      --ag-font-size: 13px;
+      --ag-border-color: #e2e8f0;
+      --ag-header-background-color: #f8fafc;
+      --ag-row-hover-color: #f1f5f9;
+    }
+  </style>
+</head>
+<body class="min-h-full bg-slate-50 text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- Top SaaS Header & Primary Navigation -->
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#003087] text-white shadow-sm">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-base font-bold tracking-tight text-slate-900">Proof-to-Pay</span>
+            <span class="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-600/20">
+              Freelancer Workspace
+            </span>
+          </div>
+          <p class="text-xs text-slate-500">Turn messy client messages into clear scopes &amp; verified PayPal invoices</p>
+        </div>
+      </div>
+
+      <!-- Main Navigation: Dashboard | Projects | Invoices | AI Assistant | Settings -->
+      <nav class="flex flex-wrap items-center gap-1" aria-label="Main Navigation">
+        <button id="nav-dashboard" onclick="switchNav('dashboard')" class="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition">
+          Dashboard
+        </button>
+        <button id="nav-projects" onclick="switchNav('projects')" class="rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
+          Projects
+        </button>
+        <button id="nav-invoices" onclick="switchNav('invoices')" class="rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
+          Invoices
+        </button>
+        <button id="nav-assistant" onclick="switchNav('assistant')" class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
+          <span>AI Assistant</span>
+          <span id="nav-approval-badge" class="hidden rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-bold text-white">1</span>
+        </button>
+        <button id="nav-settings" onclick="switchNav('settings')" class="rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
+          Settings
+        </button>
+      </nav>
+
+      <!-- Visible 3-Tier PayPal Connection Mode Indicator (Loaded from GET /api/health) -->
+      <div class="flex items-center gap-2">
+        <button id="header-connection-pill" onclick="switchNav('settings')" class="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 transition">
+          <span id="header-connection-dot" class="h-2 w-2 rounded-full bg-amber-500"></span>
+          <span id="header-connection-text">Checking Server...</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Container -->
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+
+    <!-- ================================================================== -->
+    <!-- VIEW 1: DASHBOARD (Freelancer Overview)                            -->
+    <!-- ================================================================== -->
+    <section id="view-dashboard" class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">Welcome back, Alex</h1>
+          <p class="mt-1 text-sm text-slate-600">
+            Manage your client scopes, protect your projects against scope creep, and track verified PayPal invoices.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button id="btn-dash-new-project" onclick="openProjectStep(1)" class="rounded-xl bg-[#0070ba] px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#005ea6] transition">
+            + New Client Project
+          </button>
+          <button id="btn-dash-ask-ai" onclick="switchNav('assistant')" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+            Open AI Assistant
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Key Freelancer Metrics -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-xs font-medium text-slate-500">Total Projects</div>
+          <div id="dash-metric-projects" class="mt-2 text-2xl font-bold text-slate-900">0</div>
+          <div class="mt-1 text-xs text-slate-500">Active client scopes</div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-xs font-medium text-slate-500">Pending Invoices</div>
+          <div id="dash-metric-pending" class="mt-2 text-2xl font-bold text-amber-600">0</div>
+          <div class="mt-1 text-xs text-slate-500">Awaiting client payment</div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-xs font-medium text-slate-500">Paid Invoices (Verified)</div>
+          <div id="dash-metric-paid" class="mt-2 text-2xl font-bold text-emerald-600">0</div>
+          <div class="mt-1 text-xs text-slate-500">Confirmed via PayPal API</div>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="text-xs font-medium text-slate-500">Outstanding Amount</div>
+          <div id="dash-metric-outstanding" class="mt-2 text-2xl font-bold text-slate-900">$0.00</div>
+          <div id="dash-metric-scoped-sub" class="mt-1 text-xs text-slate-500">$0.00 in draft scopes</div>
+        </div>
+      </div>
+
+      <!-- Quick Conversational AI Bar on Dashboard -->
+      <div class="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50/80 via-white to-indigo-50/60 p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold text-white">AI</span>
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">Ask Your AI Business Assistant</h2>
+              <p class="text-xs text-slate-600">Executes real backend tools (<code class="font-mono text-[11px]">/api/agent/chat</code>) to analyze briefs, calculate extra charges, lock scopes, and prepare PayPal invoices.</p>
+            </div>
+          </div>
+          <span id="dash-active-project-pill" class="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+            Active Project: Loading...
+          </span>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="btn-quick-missing" onclick="askAiFromDashboard('What is missing from this project brief?')" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-blue-400 hover:text-blue-700 transition">
+            "What is missing from this project brief?"
+          </button>
+          <button id="btn-quick-extra" onclick="askAiFromDashboard('Should I charge extra for these additional requirements?')" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-blue-400 hover:text-blue-700 transition">
+            "Should I charge extra for copywriting?"
+          </button>
+          <button id="btn-quick-invoice" onclick="askAiFromDashboard('Generate an invoice for this approved project.')" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-blue-400 hover:text-blue-700 transition">
+            "Generate an invoice for this project"
+          </button>
+          <button id="btn-quick-reminder" onclick="askAiFromDashboard('Draft a polite payment reminder.')" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-blue-400 hover:text-blue-700 transition">
+            "Draft a polite payment reminder"
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Projects & Recent Payments Grid -->
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div class="lg:col-span-7 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900">Your Client Projects</h2>
+              <p class="text-xs text-slate-500">Persisted on the backend (<code class="font-mono text-[11px]">GET /api/projects</code>)</p>
+            </div>
+            <button id="btn-dash-load-samples" onclick="loadSampleFreelancerProjects()" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+              Load 3 Sample Client Briefs
+            </button>
+          </div>
+          <div id="dash-projects-list" class="space-y-3">
+            <!-- Populated from backend GET /api/projects -->
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 space-y-6">
+          <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-base font-bold text-slate-900">Recent Payments</h2>
+            <p class="text-xs text-slate-500">Only authentic verified PayPal payments appear here</p>
+            <div id="dash-recent-payments" class="mt-4"></div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-base font-bold text-slate-900">Recent Project Activity</h2>
+            <div id="dash-recent-activity" class="mt-3 space-y-2.5"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- VIEW 2: PROJECTS (Clean 5-Step Guided Freelancer Workflow)         -->
+    <!-- ================================================================== -->
+    <section id="view-projects" class="hidden space-y-6">
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <label for="project-select-dropdown" class="text-xs font-semibold uppercase tracking-wider text-slate-500">Project:</label>
+            <select id="project-select-dropdown" onchange="handleSelectActiveProject(this.value)" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"></select>
+            <span id="project-status-badge" class="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold text-amber-800">
+              Draft Scope
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-workflow-ask-ai" onclick="switchNav('assistant')" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition">
+              Ask AI Assistant About This Project
+            </button>
+          </div>
+        </div>
+
+        <!-- 5-Step Horizontal Stepper -->
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-5">
+          <button id="step-tab-1" onclick="openProjectStep(1)" class="flex items-center gap-2.5 rounded-xl border border-blue-600 bg-blue-50/70 p-3 text-left transition">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">1</span>
+            <div class="min-w-0">
+              <div class="truncate text-xs font-bold text-slate-900">Create Project</div>
+              <div class="truncate text-[11px] text-slate-500">Client &amp; message</div>
+            </div>
+          </button>
+          <button id="step-tab-2" onclick="openProjectStep(2)" class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 transition">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">2</span>
+            <div class="min-w-0">
+              <div class="truncate text-xs font-bold text-slate-900">AI Scope Analysis</div>
+              <div class="truncate text-[11px] text-slate-500">Risks &amp; missing info</div>
+            </div>
+          </button>
+          <button id="step-tab-3" onclick="openProjectStep(3)" class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 transition">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">3</span>
+            <div class="min-w-0">
+              <div class="truncate text-xs font-bold text-slate-900">Review &amp; Approve</div>
+              <div class="truncate text-[11px] text-slate-500">Edit &amp; lock scope</div>
+            </div>
+          </button>
+          <button id="step-tab-4" onclick="openProjectStep(4)" class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 transition">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">4</span>
+            <div class="min-w-0">
+              <div class="truncate text-xs font-bold text-slate-900">PayPal Invoice</div>
+              <div class="truncate text-[11px] text-slate-500">Generate &amp; send</div>
+            </div>
+          </button>
+          <button id="step-tab-5" onclick="openProjectStep(5)" class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 transition">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">5</span>
+            <div class="min-w-0">
+              <div class="truncate text-xs font-bold text-slate-900">Track Payment</div>
+              <div class="truncate text-[11px] text-slate-500">Status &amp; verification</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 1 PANEL: CREATE A PROJECT (Calls POST /api/projects/extract) -->
+      <div id="step-panel-1" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="mx-auto max-w-3xl space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Step 1 of 5</span>
+              <h2 class="text-lg font-bold text-slate-900">Create a Freelance Project</h2>
+              <p class="text-xs text-slate-500">
+                Enter your client's details and paste their WhatsApp, email, or Slack message. The backend AI analyzer (<code class="font-mono">POST /api/projects/extract</code>) will extract requirements and spot scope creep.
+              </p>
+            </div>
+            <div>
+              <label for="preset-brief-selector" class="mb-1 block text-[11px] font-semibold text-slate-500">Try a Sample Client Message</label>
+              <select id="preset-brief-selector" onchange="loadPresetIntoForm(this.value)" class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800">
+                <option value="demo-startup-landing">WhatsApp: Startup Landing Page ($450 + Copywriting?)</option>
+                <option value="demo-saas-ui-kit">Slack: SaaS Brand &amp; Figma UI Kit ($850)</option>
+                <option value="demo-shopify-redesign">Email: Mobile Product Page Redesign ($1,200)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label for="form-client-name" class="mb-1 block text-xs font-semibold text-slate-700">Client Name</label>
+              <input id="form-client-name" type="text" value="Jordan Vance (NovaPulse Startup)" placeholder="e.g. Jordan Vance" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none" />
+            </div>
+            <div>
+              <label for="form-client-email" class="mb-1 block text-xs font-semibold text-slate-700">Client Email (for PayPal Invoice)</label>
+              <input id="form-client-email" type="email" value="jordan.vance-buyer@sandbox.paypal.com" placeholder="client@example.com" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none" />
+            </div>
+            <div>
+              <label for="form-proposed-budget" class="mb-1 block text-xs font-semibold text-slate-700">Proposed Budget (USD, if not in chat)</label>
+              <input id="form-proposed-budget" type="number" min="1" step="1" value="450" placeholder="450" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+              <label for="form-raw-brief" class="text-xs font-semibold text-slate-700">
+                Client WhatsApp / Email / Slack Message
+              </label>
+              <label class="cursor-pointer rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                <span>Upload Project Brief (.txt / .md)</span>
+                <input id="form-brief-file" type="file" accept=".txt,.md" onchange="handleBriefFileUpload(this)" class="hidden" />
+              </label>
+            </div>
+            <textarea id="form-raw-brief" rows="4" class="w-full rounded-xl border border-slate-300 p-3.5 text-sm leading-relaxed text-slate-900 focus:border-blue-600 focus:outline-none" placeholder="Paste the client's message or requirements here...">I need a landing page for my startup by next Friday. Three sections, mobile friendly, and I can pay $450. I may want copywriting too.</textarea>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <button id="btn-analyze-brief" onclick="submitCreateAndAnalyzeProject()" class="flex items-center gap-2 rounded-xl bg-[#0070ba] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#005ea6] transition">
+              <span>Analyze Client Brief with AI</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 PANEL: AI SCOPE ANALYSIS -->
+      <div id="step-panel-2" class="hidden space-y-6">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Step 2 of 5</span>
+                <span id="analysis-ai-provider-pill" class="rounded bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-700">
+                  Provider: Checking...
+                </span>
+              </div>
+              <h2 class="text-lg font-bold text-slate-900">AI Scope Analysis</h2>
+              <p class="text-xs text-slate-500">
+                Review what the backend AI extracted from your client's message and resolve unclear requests before locking your scope.
+              </p>
+            </div>
+            <button id="btn-go-step-3" onclick="openProjectStep(3)" class="rounded-xl bg-[#0070ba] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#005ea6] transition">
+              Continue to Review &amp; Approve Scope →
+            </button>
+          </div>
+
+          <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-xs font-medium text-slate-500">Quoted Price / Proposed Budget</div>
+              <div id="analysis-price-display" class="mt-1 text-lg font-bold text-slate-900">USD $450.00</div>
+              <div id="analysis-price-sub" class="mt-0.5 text-xs text-slate-500">Extracted from client message</div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-xs font-medium text-slate-500">Identified Deadline</div>
+              <div id="analysis-deadline-display" class="mt-1 text-lg font-bold text-slate-900">2026-11-06</div>
+              <div id="analysis-deadline-sub" class="mt-0.5 text-xs text-slate-500">Calculated from "by next Friday"</div>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div class="text-xs font-medium text-slate-500">Suggested Revision Limit</div>
+              <div id="analysis-revisions-display" class="mt-1 text-lg font-bold text-slate-900">2 Rounds Included</div>
+              <div class="mt-0.5 text-xs text-slate-500">Protects against endless changes</div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="space-y-5">
+              <div class="rounded-xl border border-slate-200 p-4">
+                <h3 class="text-sm font-bold text-slate-900">Identified Deliverables</h3>
+                <ul id="analysis-deliverables-list" class="mt-3 space-y-2 text-xs text-slate-700"></ul>
+              </div>
+
+              <div class="rounded-xl border border-slate-200 p-4">
+                <h3 class="text-sm font-bold text-slate-900">Missing Information to Clarify</h3>
+                <ul id="analysis-missing-list" class="mt-2.5 list-disc space-y-1.5 pl-4 text-xs text-slate-600"></ul>
+              </div>
+            </div>
+
+            <div class="space-y-5">
+              <div class="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                <h3 class="text-sm font-bold text-amber-900">Ambiguous Statements &amp; Scope Creep Warnings</h3>
+                <div id="analysis-warnings-list" class="mt-3 space-y-3"></div>
+              </div>
+
+              <div class="rounded-xl border border-blue-200 bg-blue-50/40 p-4">
+                <h3 class="text-sm font-bold text-slate-900">Suggested Additional Charges</h3>
+                <p class="mt-0.5 text-xs text-slate-600">
+                  Decide how to handle extra items the client mentioned tentatively:
+                </p>
+                <div id="analysis-addons-list" class="mt-3 space-y-2.5"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 PANEL: REVIEW AND APPROVE SCOPE (Calls PUT /api/projects/:id/scope & POST /api/projects/:id/approve) -->
+      <div id="step-panel-3" class="hidden space-y-6">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Step 3 of 5</span>
+              <h2 class="text-lg font-bold text-slate-900">Review &amp; Approve Scope of Work</h2>
+              <p class="text-xs text-slate-500">
+                Edit any field below (<code class="font-mono">PUT /api/projects/:id/scope</code>). You must explicitly approve and lock this Scope of Work (<code class="font-mono">POST /api/projects/:id/approve</code>) before generating a PayPal invoice.
+              </p>
+            </div>
+            <div id="step3-lock-status-pill" class="rounded-full bg-amber-100 px-3.5 py-1 text-xs font-semibold text-amber-800">
+              Unlocked Draft
+            </div>
+          </div>
+
+          <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div class="sm:col-span-2">
+              <label for="edit-project-title" class="mb-1 block text-xs font-semibold text-slate-700">Project Title</label>
+              <input id="edit-project-title" type="text" onchange="saveScopeEditsToBackend()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none" />
+            </div>
+            <div>
+              <label for="edit-deadline" class="mb-1 block text-xs font-semibold text-slate-700">Timeline / Delivery Date</label>
+              <input id="edit-deadline" type="date" onchange="saveScopeEditsToBackend()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none" />
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
+            <div>
+              <label for="edit-client-name" class="mb-1 block text-xs font-semibold text-slate-700">Client Name</label>
+              <input id="edit-client-name" type="text" onchange="saveScopeEditsToBackend()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none" />
+            </div>
+            <div>
+              <label for="edit-client-email" class="mb-1 block text-xs font-semibold text-slate-700">Client Email</label>
+              <input id="edit-client-email" type="email" onchange="saveScopeEditsToBackend()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none" />
+            </div>
+            <div>
+              <label for="edit-payment-terms" class="mb-1 block text-xs font-semibold text-slate-700">Payment Terms</label>
+              <select id="edit-payment-terms" onchange="saveScopeEditsToBackend()" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none">
+                <option value="DUE_ON_RECEIPT">Due on Receipt</option>
+                <option value="NET_15">Net 15 Days</option>
+                <option value="NET_30">Net 30 Days</option>
+                <option value="DUE_ON_DATE_SPECIFIED">Due on Delivery Date</option>
+              </select>
+            </div>
+            <div>
+              <label for="edit-revision-limit" class="mb-1 block text-xs font-semibold text-slate-700">Revision Limit (Rounds)</label>
+              <input id="edit-revision-limit" type="number" min="0" max="20" onchange="saveScopeEditsToBackend()" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none" />
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label for="edit-deliverables" class="mb-1 block text-xs font-semibold text-slate-700">Included Deliverables (one per line)</label>
+              <textarea id="edit-deliverables" rows="4" onchange="saveScopeEditsToBackend()" class="w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-800 focus:border-blue-600 focus:outline-none"></textarea>
+            </div>
+            <div>
+              <label for="edit-exclusions" class="mb-1 block text-xs font-semibold text-slate-700">Exclusions (Not included in base price)</label>
+              <textarea id="edit-exclusions" rows="4" onchange="saveScopeEditsToBackend()" class="w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-800 focus:border-blue-600 focus:outline-none"></textarea>
+            </div>
+          </div>
+
+          <div class="mt-5">
+            <div class="mb-2 flex items-center justify-between">
+              <label class="text-xs font-bold text-slate-800">Project Pricing &amp; Invoice Line Items</label>
+              <button id="btn-step3-add-item" onclick="addScopeLineItem()" class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+                + Add Line Item
+              </button>
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left text-xs">
+                <thead class="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase text-slate-500">
+                  <tr>
+                    <th class="px-3.5 py-2.5">Description</th>
+                    <th class="px-2 py-2.5 w-20 text-right">Qty</th>
+                    <th class="px-2 py-2.5 w-32 text-right">Price (USD)</th>
+                    <th class="px-3.5 py-2.5 w-32 text-right">Amount</th>
+                    <th class="px-2 py-2.5 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody id="edit-line-items-tbody" class="divide-y divide-slate-200 bg-white"></tbody>
+                <tfoot class="border-t border-slate-200 bg-slate-50 font-bold text-slate-900">
+                  <tr>
+                    <td colspan="3" class="px-3.5 py-3 text-right text-slate-600">Total Project Cost:</td>
+                    <td id="edit-total-cost" class="px-3.5 py-3 text-right text-sm text-emerald-700">USD $450.00</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+            <div>
+              <div class="text-sm font-bold text-slate-900">Ready to lock this Scope of Work?</div>
+              <p class="text-xs text-slate-600">
+                Locking confirms that you have reviewed the deliverables, exclusions, and total price. Editing later will unlock the scope for re-approval.
+              </p>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <button id="btn-lock-scope" onclick="openLockScopeModal()" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-500 transition">
+                Approve &amp; Lock Final Scope
+              </button>
+              <button id="btn-step3-next" onclick="openProjectStep(4)" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+                Next: Generate Invoice →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4 PANEL: GENERATE PAYPAL INVOICE (Calls POST /api/projects/:id/paypal/draft & /send) -->
+      <div id="step-panel-4" class="hidden space-y-6">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Step 4 of 5</span>
+              <h2 class="text-lg font-bold text-slate-900">Generate &amp; Send PayPal Invoice</h2>
+              <p class="text-xs text-slate-500">
+                Review the invoice preview generated from your locked Scope of Work, create the draft invoice (<code class="font-mono">POST /api/projects/:id/paypal/draft</code>), and confirm before sending (<code class="font-mono">POST /api/projects/:id/paypal/send</code>).
+              </p>
+            </div>
+            <div id="step4-connection-badge" class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+              Mode: Checking...
+            </div>
+          </div>
+
+          <div id="step4-invoice-preview" class="mt-5 rounded-2xl border border-slate-200 bg-slate-50/70 p-5"></div>
+
+          <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 p-4">
+              <div class="text-sm font-bold text-slate-900">1. Create PayPal Draft Invoice</div>
+              <p class="mt-1 text-xs text-slate-500">
+                Generates a unique invoice number and saves a draft invoice with your approved deliverables and exclusions. Duplicate invoices are automatically prevented.
+              </p>
+              <button id="btn-create-invoice" onclick="handleCreateDraftInvoiceAction()" class="mt-3 w-full rounded-xl bg-[#0070ba] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#005ea6] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                Generate PayPal Draft Invoice
+              </button>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 p-4">
+              <div class="text-sm font-bold text-slate-900">2. Review &amp; Send to Client</div>
+              <p class="mt-1 text-xs text-slate-500">
+                Requires your explicit confirmation before emailing the invoice to your client.
+              </p>
+              <button id="btn-send-invoice" onclick="openConfirmSendInvoiceModal()" class="mt-3 w-full rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                Review &amp; Confirm Sending Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5 PANEL: TRACK PAYMENT (Calls POST /api/projects/:id/paypal/sync) -->
+      <div id="step-panel-5" class="hidden space-y-6">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Step 5 of 5</span>
+              <h2 class="text-lg font-bold text-slate-900">Track Invoice &amp; Payment Verification</h2>
+              <p class="text-xs text-slate-500">
+                Payment is only marked PAID after verification through an authentic PayPal API response (<code class="font-mono">POST /api/projects/:id/paypal/sync</code>) or a cryptographically verified PayPal webhook (<code class="font-mono">POST /api/webhooks/paypal</code>).
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btn-refresh-payment-status" onclick="handleCheckInvoiceStatusAction()" class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+                Check Payment Status
+              </button>
+              <button id="btn-draft-reminder-step5" onclick="handleDraftReminderFromStep5()" class="rounded-xl bg-[#0070ba] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#005ea6] transition">
+                Draft Polite Payment Reminder
+              </button>
+            </div>
+          </div>
+
+          <div id="step5-payment-details" class="mt-5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- VIEW 3: INVOICES (Freelancer Invoice Ledger)                       -->
+    <!-- ================================================================== -->
+    <section id="view-invoices" class="hidden space-y-6">
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-lg font-bold text-slate-900">Invoices</h1>
+            <p class="text-xs text-slate-500">
+              Track all project scopes, draft invoices, sent payment requests, and verified payments in one place.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <input id="invoices-search-input" type="text" oninput="filterInvoicesGrid(this.value)" placeholder="Search client, project, invoice #..." class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none" />
+            <button id="btn-export-invoices-csv" onclick="exportInvoicesCsv()" class="rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div id="invoices-ag-grid" class="ag-theme-quartz w-full overflow-hidden rounded-xl border border-slate-200" style="height: 360px;"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- VIEW 4: AI ASSISTANT (Calls POST /api/agent/chat & /api/agent/approve) -->
+    <!-- ================================================================== -->
+    <section id="view-assistant" class="hidden space-y-6">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div class="lg:col-span-7 flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" style="min-height: 540px;">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+            <div>
+              <h1 class="text-base font-bold text-slate-900">AI Freelancer Business Assistant</h1>
+              <p class="text-xs text-slate-500">
+                Executes backend tools via <code class="font-mono">/api/agent/chat</code>, <code class="font-mono">/api/agent/tool</code>, and <code class="font-mono">/api/agent/approve</code>.
+              </p>
+            </div>
+            <span id="ai-active-project-label" class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+              Project: Loading...
+            </span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap gap-1.5">
+            <button id="chip-analyze" onclick="sendAssistantPrompt('Analyze this client\'s requirements.')" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              Analyze this client's requirements
+            </button>
+            <button id="chip-missing" onclick="sendAssistantPrompt('What is missing from this project brief?')" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              What is missing from this brief?
+            </button>
+            <button id="chip-charge-extra" onclick="sendAssistantPrompt('Should I charge extra for these additional requirements?')" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              Should I charge extra?
+            </button>
+            <button id="chip-lock-scope" onclick="sendAssistantPrompt('Lock the final scope for this project.')" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              Lock the final scope
+            </button>
+            <button id="chip-gen-invoice" onclick="sendAssistantPrompt('Generate an invoice for this approved project.')" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              Generate an invoice
+            </button>
+            <button id="chip-check-paid" onclick="sendAssistantPrompt('Check whether the client has paid.')" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              Check whether client has paid
+            </button>
+            <button id="chip-remind" onclick="sendAssistantPrompt('Draft a polite payment reminder.')" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition">
+              Draft a polite payment reminder
+            </button>
+          </div>
+
+          <div id="assistant-chat-history" class="my-4 flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/70 p-4 max-h-[340px]"></div>
+
+          <div id="assistant-pending-approval-box" class="mb-3 hidden rounded-xl border border-amber-300 bg-amber-50 p-4"></div>
+
+          <div class="flex gap-2">
+            <input id="assistant-chat-input" type="text" onkeydown="if(event.key==='Enter') sendAssistantInput()" placeholder="Ask e.g. 'What is missing from this brief?' or 'Generate an invoice for this approved project'..." class="flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none" />
+            <button id="btn-assistant-send" onclick="sendAssistantInput()" class="rounded-xl bg-[#0070ba] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#005ea6] transition">
+              Send
+            </button>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="border-b border-slate-100 pb-3">
+            <h2 class="text-sm font-bold text-slate-900">AI Tool Execution Log</h2>
+            <p class="text-xs text-slate-500">
+              Persisted backend execution trace showing reasoning summary, tool selected, arguments, results, and human approval status.
+            </p>
+          </div>
+          <div id="assistant-execution-log" class="mt-4 space-y-3 max-h-[450px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- VIEW 5: SETTINGS & OPTIONAL DEVELOPER / ADVANCED TOOLS             -->
+    <!-- ================================================================== -->
+    <section id="view-settings" class="hidden space-y-6">
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 class="text-lg font-bold text-slate-900">PayPal Integration &amp; Workspace Settings</h1>
+        <p class="mt-1 text-xs text-slate-500">
+          Proof-to-Pay manages all PayPal OAuth 2.0 credentials strictly on the backend server (<code class="font-mono text-slate-700">.env</code>) and never stores secrets in browser storage or frontend code.
+        </p>
+
+        <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div id="mode-card-fixture" class="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-900">1. Local Demo / Fixture Mode</span>
+              <span id="mode-badge-fixture" class="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">ACTIVE</span>
+            </div>
+            <p class="mt-2 text-xs text-slate-600">
+              Used for local evaluation when PayPal Sandbox keys are not set in <code class="font-mono">.env</code>. All invoices and links are clearly labeled as simulated and are never marked as real PayPal transactions.
+            </p>
+          </div>
+
+          <div id="mode-card-sandbox" class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-900">2. Connected PayPal Sandbox Mode</span>
+              <span id="mode-badge-sandbox" class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">CONFIGURE IN .ENV</span>
+            </div>
+            <p class="mt-2 text-xs text-slate-600">
+              Connects to <code class="font-mono">https://api-m.sandbox.paypal.com</code> via server-side OAuth 2.0 to create, send, and verify real PayPal Sandbox invoices and webhooks.
+            </p>
+          </div>
+
+          <div id="mode-card-live" class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-900">3. Live PayPal Mode</span>
+              <span id="mode-badge-live" class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">PRODUCTION</span>
+            </div>
+            <p class="mt-2 text-xs text-slate-600">
+              Active only when <code class="font-mono">PAYPAL_ENV=live</code> and production credentials are configured on a secure backend server.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-xl border border-slate-200 bg-slate-900 p-4 text-xs text-slate-200">
+          <div class="font-semibold text-white">How to Enable Connected PayPal Sandbox Mode (Server-Side <code class="text-blue-300">.env</code>):</div>
+          <pre class="mt-2 overflow-x-auto font-mono text-[11px] leading-relaxed text-emerald-300">PAYPAL_ENV=sandbox
+PAYPAL_API_BASE_URL=https://api-m.sandbox.paypal.com
+PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id
+PAYPAL_CLIENT_SECRET=your_paypal_sandbox_client_secret
+PAYPAL_INVOICER_EMAIL=sb-merchant@business.example.com
+PAYPAL_WEBHOOK_ID=your_paypal_sandbox_webhook_id</pre>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Developer / Advanced Tools (Optional)</h2>
+            <p class="text-xs text-slate-500">
+              Test backend webhook security guards (<code class="font-mono">POST /api/webhooks/paypal</code>) and inspect PayPal REST API payloads.
+            </p>
+          </div>
+          <button id="btn-toggle-dev-panel" onclick="toggleDeveloperSection()" class="rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+            Show Developer Tools
+          </button>
+        </div>
+
+        <div id="developer-advanced-panel" class="mt-5 hidden space-y-5 border-t border-slate-100 pt-5">
+          <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Webhook &amp; Payment Verification Guard Test</h3>
+              <p class="mt-1 text-xs text-slate-600">
+                Calls <code class="font-mono">POST /api/webhooks/paypal</code> to verify that simulated events (HTTP 422) and unverified signatures (HTTP 401) are blocked from marking an invoice as PAID:
+              </p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button id="btn-dev-test-sim-webhook" onclick="runDevSimulatedWebhookTest()" class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-500 transition">
+                  Test Simulated PAID Event (Expect 422 Block)
+                </button>
+                <button id="btn-dev-test-spoof-webhook" onclick="runDevSpoofedWebhookTest()" class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500 transition">
+                  Test Unverified Signature (Expect 401 Block)
+                </button>
+              </div>
+              <pre id="dev-webhook-test-output" class="mt-3 max-h-40 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] text-slate-200">Ready to test payment verification guards via POST /api/webhooks/paypal.</pre>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">PayPal Invoicing REST API v2 Payload</h3>
+              <pre id="dev-paypal-json-preview" class="mt-2 max-h-52 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] text-emerald-300"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL 1: EXPLICIT HUMAN APPROVAL TO LOCK SCOPE -->
+  <div id="modal-lock-scope" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-base font-bold text-slate-900">Approve &amp; Lock Scope of Work</h3>
+        <button id="btn-close-lock-modal" onclick="closeLockScopeModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <div class="mt-4 space-y-3 text-xs text-slate-600">
+        <p>Please confirm that you have reviewed the Scope of Work before locking it for invoicing:</p>
+        <div id="modal-lock-summary" class="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1 text-slate-800"></div>
+        <div>
+          <label for="input-approver-signature" class="mb-1 block font-semibold text-slate-700">Your Name (Freelancer Approval)</label>
+          <input id="input-approver-signature" type="text" value="Alex Rivera" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
+        </div>
+        <label class="flex cursor-pointer items-start gap-2 pt-1">
+          <input id="checkbox-confirm-lock" type="checkbox" checked class="mt-0.5 rounded border-slate-300" />
+          <span class="text-slate-700">I approve locking this Scope of Work so a PayPal invoice can be generated.</span>
+        </label>
+      </div>
+      <div class="mt-5 flex justify-end gap-2">
+        <button id="btn-cancel-lock" onclick="closeLockScopeModal()" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          Cancel
+        </button>
+        <button id="btn-confirm-lock" onclick="confirmLockScopeAction()" class="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500">
+          Approve &amp; Lock Scope
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: EXPLICIT HUMAN APPROVAL TO SEND INVOICE -->
+  <div id="modal-send-invoice" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-base font-bold text-slate-900">Confirm Sending PayPal Invoice</h3>
+        <button id="btn-close-send-modal" onclick="closeConfirmSendInvoiceModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <div class="mt-4 space-y-3 text-xs text-slate-600">
+        <p>You are about to send this invoice to your client:</p>
+        <div id="modal-send-summary" class="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1 text-slate-800"></div>
+        <label class="flex cursor-pointer items-start gap-2 pt-1">
+          <input id="checkbox-confirm-send" type="checkbox" checked class="mt-0.5 rounded border-slate-300" />
+          <span class="text-slate-700">I explicitly authorize sending this invoice to the client's email address.</span>
+        </label>
+      </div>
+      <div class="mt-5 flex justify-end gap-2">
+        <button id="btn-cancel-send" onclick="closeConfirmSendInvoiceModal()" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          Cancel
+        </button>
+        <button id="btn-confirm-send" onclick="confirmSendInvoiceAction()" class="rounded-xl bg-[#0070ba] px-4 py-2 text-xs font-bold text-white hover:bg-[#005ea6]">
+          Confirm &amp; Send Invoice
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm rounded-xl border border-slate-200 bg-slate-900 px-4 py-3 text-xs text-white shadow-lg">
+    <div id="toast-title" class="font-bold">Updated</div>
+    <div id="toast-body" class="mt-0.5 text-slate-300"></div>
+  </div>
+
+  <!-- ================================================================== -->
+  <!-- BACKEND-CONNECTED APPLICATION LOGIC                                -->
+  <!-- ================================================================== -->
+  <script>
+    const FREELANCER_PRESETS = {
+      'demo-startup-landing': {
+        id: 'demo-startup-landing',
+        clientName: 'Jordan Vance (NovaPulse Startup)',
+        clientEmail: 'jordan.vance-buyer@sandbox.paypal.com',
+        projectTitle: 'Startup Landing Page (3 Sections)',
+        proposedBudget: 450,
+        rawBrief:
+          'I need a landing page for my startup by next Friday. Three sections, mobile friendly, and I can pay $450. I may want copywriting too.'
+      },
+      'demo-saas-ui-kit': {
+        id: 'demo-saas-ui-kit',
+        clientName: 'Marcus Chen (VectorFlow Labs)',
+        clientEmail: 'marcus.chen-buyer@sandbox.paypal.com',
+        projectTitle: 'VectorFlow Brand Identity & Figma UI Kit',
+        proposedBudget: 850,
+        rawBrief:
+          'Need a clean SVG logo system, color palette, and dark-mode Figma component library by 2026-11-10. I can pay $850 upon completion. Maybe we can also include animated icons if possible.'
+      },
+      'demo-shopify-redesign': {
+        id: 'demo-shopify-redesign',
+        clientName: 'Elena Rostova (Lumen Studio)',
+        clientEmail: 'elena.rostova-buyer@sandbox.paypal.com',
+        projectTitle: 'Mobile Product Page & Cart Drawer Redesign',
+        proposedBudget: 1200,
+        rawBrief:
+          'Hi! We need a complete redesign of our mobile product page and slide-out cart drawer in two weeks. Budget is $1,200. Must include mobile-first Figma layouts and clean HTML/CSS. We might also want custom inventory sync if possible.'
+      }
+    };
+
+    const API_BASE = window.location.origin && window.location.origin.startsWith('http')
+      ? window.location.origin
+      : 'http://localhost:3000';
+
+    const state = {
+      activeNav: 'dashboard',
+      activeStep: 1,
+      connectionMode: 'LOCAL_DEMO_FIXTURE_MODE',
+      connectionLabel: 'Local Demo / Fixture Mode (Simulated)',
+      isRealPayPal: false,
+      aiProvider: 'deterministic-fallback',
+      projects: [],
+      activeProjectId: null,
+      chatMessages: [],
+      pendingApproval: null,
+      gridApi: null,
+      devPanelOpen: false
+    };
+
+    function getActiveProject() {
+      return state.projects.find((p) => p.id === state.activeProjectId) || state.projects[0] || null;
+    }
+
+    function upsertLocalStateProject(updatedProject) {
+      if (!updatedProject || !updatedProject.id) return;
+      const idx = state.projects.findIndex((p) => p.id === updatedProject.id);
+      if (idx >= 0) {
+        state.projects[idx] = updatedProject;
+      } else {
+        state.projects.unshift(updatedProject);
+      }
+      state.activeProjectId = updatedProject.id;
+      const pendingList = updatedProject.pendingApprovals || [];
+      state.pendingApproval = pendingList.length > 0 ? pendingList[pendingList.length - 1] : null;
+    }
+
+    function notify(title, message) {
+      const banner = document.getElementById('toast-banner');
+      document.getElementById('toast-title').textContent = title;
+      document.getElementById('toast-body').textContent = message;
+      banner.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => banner.classList.add('hidden'), 4500);
+    }
+
+    // ----------------------------------------------------------------------
+    // 1. Backend REST API Client (`fetch()` calls to all 12 endpoints)
+    // ----------------------------------------------------------------------
+    async function apiFetch(endpointPath, options = {}) {
+      const targetUrl = API_BASE + endpointPath;
+      const headers = Object.assign(
+        {
+          'Content-Type': 'application/json',
+          'X-Freelancer-Id': 'freelancer-alex-rivera'
+        },
+        options.headers || {}
+      );
+      const response = await fetch(targetUrl, {
+        method: options.method || 'GET',
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const err = new Error(data.error || 'API request failed (' + response.status + ')');
+        err.status = response.status;
+        err.data = data;
+        throw err;
+      }
+      return { status: response.status, data };
+    }
+
+    // Endpoint 1 & 2: GET /api/health and GET /api/projects
+    async function bootstrapFromBackend() {
+      try {
+        const healthRes = await apiFetch('/api/health');
+        const pp = healthRes.data.paypal || {};
+        state.connectionMode = pp.connectionMode || 'LOCAL_DEMO_FIXTURE_MODE';
+        state.connectionLabel = pp.connectionLabel || 'Local Demo / Fixture Mode (Simulated)';
+        state.isRealPayPal = Boolean(pp.isRealPayPal);
+        state.aiProvider = healthRes.data.ai?.provider || 'deterministic-fallback';
+
+        const projRes = await apiFetch('/api/projects');
+        state.projects = projRes.data.projects || [];
+        if (state.projects.length > 0) {
+          state.activeProjectId = state.projects[0].id;
+          const pendingList = state.projects[0].pendingApprovals || [];
+          state.pendingApproval = pendingList.length > 0 ? pendingList[pendingList.length - 1] : null;
+        }
+        renderWorkspace();
+      } catch (err) {
+        // Fallback seed ONLY when previewed inside an isolated static iframe with no local server running
+        const fallbackProject = {
+          id: 'P2P-DEMO01',
+          state: 'DRAFT_SCOPE',
+          rawBrief: FREELANCER_PRESETS['demo-startup-landing'].rawBrief,
+          proposedBudget: 450,
+          extractionMeta: { provider: 'deterministic-fallback', liveAiUsed: false },
+          scope: {
+            clientName: 'Jordan Vance (NovaPulse Startup)',
+            clientEmail: 'jordan.vance-buyer@sandbox.paypal.com',
+            projectTitle: 'Startup Landing Page (3 Sections)',
+            deadline: '2026-11-06',
+            currency: 'USD',
+            paymentTerms: 'DUE_ON_RECEIPT',
+            revisionLimit: 2,
+            deliverables: [
+              { title: 'Startup Landing Page (3 Core Sections)' },
+              { title: 'Mobile-Responsive Layout Optimization' },
+              { title: 'Up to 2 Rounds of Revisions' }
+            ],
+            exclusions: [
+              'Custom website copywriting and brand messaging (unless added as a +$150 line item)',
+              'Paid stock photos, premium font licenses, and ongoing web hosting/domain fees'
+            ],
+            lineItems: [
+              {
+                id: 'ITEM-1',
+                name: 'Startup Landing Page (3 Sections, Mobile-Friendly)',
+                quantity: '1',
+                unitPrice: 450,
+                subtotal: 450
+              }
+            ],
+            totalAmount: 450
+          },
+          analysisDetails: {
+            deadlineLabel: '2026-11-06 (calculated from "by next Friday")',
+            quotedPriceLabel: 'Client quoted $450 in message',
+            ambiguousStatements: [
+              {
+                quote: 'I may want copywriting too',
+                issue: 'Unpriced Copywriting Request ("I may want copywriting too")'
+              }
+            ],
+            missingInformation: [
+              'Number of included revision rounds was not mentioned by the client.',
+              'Brand assets (logo, fonts, images) and final hosting/deployment handoff details are missing.'
+            ],
+            scopeCreepWarnings: [
+              'Client mentioned "I may want copywriting too" without increasing the $450 budget.'
+            ],
+            additionalCharges: [
+              {
+                id: 'ADDON-COPY',
+                title: 'Conversion Copywriting for 3 Landing Page Sections',
+                suggestedPrice: 150,
+                reason: 'Client said "I may want copywriting too" — should be billed separately or explicitly excluded.'
+              }
+            ]
+          },
+          scopeLock: null,
+          paypalInvoice: null,
+          pendingApprovals: [],
+          agentExecutionLog: [],
+          auditTrail: []
+        };
+        state.projects = [fallbackProject];
+        state.activeProjectId = fallbackProject.id;
+        renderWorkspace();
+      }
+    }
+
+    // ----------------------------------------------------------------------
+    // 2. Navigation & Step Switching
+    // ----------------------------------------------------------------------
+    function switchNav(navId) {
+      state.activeNav = navId;
+      ['dashboard', 'projects', 'invoices', 'assistant', 'settings'].forEach((id) => {
+        const sec = document.getElementById('view-' + id);
+        const btn = document.getElementById('nav-' + id);
+        if (id === navId) {
+          sec.classList.remove('hidden');
+          btn.className =
+            id === 'assistant'
+              ? 'flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition'
+              : 'rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition';
+        } else {
+          sec.classList.add('hidden');
+          btn.className =
+            id === 'assistant'
+              ? 'flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition'
+              : 'rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition';
+        }
+      });
+      if (navId === 'invoices' && state.gridApi) {
+        setTimeout(() => state.gridApi.sizeColumnsToFit(), 50);
+      }
+      renderWorkspace();
+    }
+
+    function openProjectStep(stepNum) {
+      state.activeStep = stepNum;
+      if (state.activeNav !== 'projects') {
+        switchNav('projects');
+      }
+      for (let i = 1; i <= 5; i++) {
+        const panel = document.getElementById('step-panel-' + i);
+        const tab = document.getElementById('step-tab-' + i);
+        if (i === stepNum) {
+          panel.classList.remove('hidden');
+          tab.className = 'flex items-center gap-2.5 rounded-xl border border-blue-600 bg-blue-50/70 p-3 text-left transition';
+        } else {
+          panel.classList.add('hidden');
+          tab.className = 'flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 transition';
+        }
+      }
+      renderWorkspace();
+    }
+
+    function loadPresetIntoForm(presetKey) {
+      const p = FREELANCER_PRESETS[presetKey];
+      if (!p) return;
+      document.getElementById('form-client-name').value = p.clientName;
+      document.getElementById('form-client-email').value = p.clientEmail;
+      document.getElementById('form-proposed-budget').value = p.proposedBudget;
+      document.getElementById('form-raw-brief').value = p.rawBrief;
+    }
+
+    function handleBriefFileUpload(inputEl) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('form-raw-brief').value = String(e.target.result || '');
+        notify('Brief File Loaded', 'Loaded "' + file.name + '" into the project brief box.');
+      };
+      reader.readAsText(file);
+    }
+
+    // ----------------------------------------------------------------------
+    // 3. Backend-Connected Workflow Handlers
+    // ----------------------------------------------------------------------
+
+    // Endpoint 3: POST /api/projects/extract
+    async function submitCreateAndAnalyzeProject() {
+      const clientName = document.getElementById('form-client-name').value.trim();
+      const clientEmail = document.getElementById('form-client-email').value.trim();
+      const proposedBudget = Number(document.getElementById('form-proposed-budget').value || 450);
+      const rawBrief = document.getElementById('form-raw-brief').value.trim();
+
+      if (rawBrief.length < 10) {
+        notify('Please Enter a Client Brief', 'Paste at least a sentence from your client conversation.');
+        return;
+      }
+
+      try {
+        const { data } = await apiFetch('/api/projects/extract', {
+          method: 'POST',
+          body: { clientName, clientEmail, proposedBudget, rawBrief }
+        });
+        upsertLocalStateProject(data.project);
+        notify('AI Scope Analysis Complete', 'Project created and analyzed on backend.');
+        openProjectStep(2);
+      } catch (err) {
+        notify('Analysis Error', err.message);
+      }
+    }
+
+    function handleSelectActiveProject(projectId) {
+      state.activeProjectId = projectId;
+      const proj = getActiveProject();
+      const pendingList = proj?.pendingApprovals || [];
+      state.pendingApproval = pendingList.length > 0 ? pendingList[pendingList.length - 1] : null;
+      renderWorkspace();
+    }
+
+    // Endpoint 5: POST /api/agent/tool (`calculate_project_pricing`)
+    async function addSuggestedChargeToScope(addonIndex) {
+      const project = getActiveProject();
+      if (!project) return;
+      try {
+        const { data } = await apiFetch('/api/agent/tool', {
+          method: 'POST',
+          body: {
+            projectId: project.id,
+            toolName: 'calculate_project_pricing',
+            args: { includeOptionalAddons: true, applyAddonsToScope: true }
+          }
+        });
+        upsertLocalStateProject(data.project);
+        renderWorkspace();
+        notify('Additional Charge Added', 'Updated project pricing via backend tool calculate_project_pricing().');
+      } catch (err) {
+        notify('Pricing Update Failed', err.message);
+      }
+    }
+
+    function keepChargeExcluded(addonIndex) {
+      const project = getActiveProject();
+      const addon = project?.analysisDetails?.additionalCharges?.[addonIndex];
+      if (!addon) return;
+      notify('Kept in Exclusions', '"' + addon.title + '" remains listed under Exclusions.');
+    }
+
+    // Endpoint 7: PUT /api/projects/:id/scope
+    async function saveScopeEditsToBackend() {
+      const project = getActiveProject();
+      if (!project) return;
+      if (project.state !== 'DRAFT_SCOPE' && project.state !== 'HUMAN_APPROVED') {
+        notify('Scope Locked by Invoice', 'Scope cannot be edited after an invoice has been created.');
+        return;
+      }
+
+      const updatedScope = {
+        ...project.scope,
+        projectTitle: document.getElementById('edit-project-title').value,
+        deadline: document.getElementById('edit-deadline').value,
+        clientName: document.getElementById('edit-client-name').value,
+        clientEmail: document.getElementById('edit-client-email').value,
+        paymentTerms: document.getElementById('edit-payment-terms').value,
+        revisionLimit: Number(document.getElementById('edit-revision-limit').value || 2),
+        deliverables: document
+          .getElementById('edit-deliverables')
+          .value.split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((title) => ({ title })),
+        exclusions: document
+          .getElementById('edit-exclusions')
+          .value.split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      };
+
+      try {
+        const { data } = await apiFetch('/api/projects/' + encodeURIComponent(project.id) + '/scope', {
+          method: 'PUT',
+          body: { scope: updatedScope }
+        });
+        upsertLocalStateProject(data.project);
+        renderWorkspace();
+      } catch (err) {
+        notify('Scope Save Error', err.message);
+      }
+    }
+
+    async function updateScopeLineItem(idx, field, value) {
+      const project = getActiveProject();
+      if (!project) return;
+      const lineItems = project.scope.lineItems.map((li, i) => {
+        if (i !== idx) return li;
+        const copy = { ...li };
+        if (field === 'name') copy.name = value;
+        if (field === 'quantity') copy.quantity = String(Math.max(1, Number(value || 1)));
+        if (field === 'unitPrice') copy.unitPrice = Math.max(0, Number(value || 0));
+        return copy;
+      });
+
+      try {
+        const { data } = await apiFetch('/api/projects/' + encodeURIComponent(project.id) + '/scope', {
+          method: 'PUT',
+          body: { scope: { ...project.scope, lineItems } }
+        });
+        upsertLocalStateProject(data.project);
+        renderWorkspace();
+      } catch (err) {
+        notify('Line Item Error', err.message);
+      }
+    }
+
+    async function addScopeLineItem() {
+      const project = getActiveProject();
+      if (!project) return;
+      const lineItems = [
+        ...project.scope.lineItems,
+        {
+          id: 'ITEM-' + (project.scope.lineItems.length + 1),
+          name: 'Additional Deliverable',
+          quantity: '1',
+          unitPrice: 100
+        }
+      ];
+      try {
+        const { data } = await apiFetch('/api/projects/' + encodeURIComponent(project.id) + '/scope', {
+          method: 'PUT',
+          body: { scope: { ...project.scope, lineItems } }
+        });
+        upsertLocalStateProject(data.project);
+        renderWorkspace();
+      } catch (err) {
+        notify('Cannot Add Line Item', err.message);
+      }
+    }
+
+    async function removeScopeLineItem(idx) {
+      const project = getActiveProject();
+      if (!project || project.scope.lineItems.length <= 1) return;
+      const lineItems = project.scope.lineItems.filter((_, i) => i !== idx);
+      try {
+        const { data } = await apiFetch('/api/projects/' + encodeURIComponent(project.id) + '/scope', {
+          method: 'PUT',
+          body: { scope: { ...project.scope, lineItems } }
+        });
+        upsertLocalStateProject(data.project);
+        renderWorkspace();
+      } catch (err) {
+        notify('Cannot Remove Line Item', err.message);
+      }
+    }
+
+    // Endpoint 8: POST /api/projects/:id/approve
+    function openLockScopeModal() {
+      const project = getActiveProject();
+      if (!project) return;
+      const s = project.scope;
+      document.getElementById('modal-lock-summary').innerHTML =
+        '<div><strong>Project:</strong> ' + s.projectTitle + '</div>' +
+        '<div><strong>Client:</strong> ' + s.clientName + ' (' + s.clientEmail + ')</div>' +
+        '<div><strong>Deliverables:</strong> ' + s.deliverables.length + ' items (' + s.revisionLimit + ' revisions included)</div>' +
+        '<div><strong>Total Project Cost:</strong> USD $' + s.totalAmount.toFixed(2) + '</div>';
+      const modal = document.getElementById('modal-lock-scope');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeLockScopeModal() {
+      const modal = document.getElementById('modal-lock-scope');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function confirmLockScopeAction() {
+      if (!document.getElementById('checkbox-confirm-lock').checked) {
+        notify('Confirmation Required', 'Please check the approval box to lock the scope.');
+        return;
+      }
+      const approverName = document.getElementById('input-approver-signature').value.trim() || 'Alex Rivera';
+      const project = getActiveProject();
+      if (!project) return;
+
+      try {
+        const { data } = await apiFetch('/api/projects/' + encodeURIComponent(project.id) + '/approve', {
+          method: 'POST',
+          body: { explicitConfirmation: true, approverName }
+        });
+        upsertLocalStateProject(data.project);
+        closeLockScopeModal();
+        notify('Scope Approved & Locked', 'Locked Scope v' + data.project.scopeLock.version + ' on the backend.');
+        openProjectStep(4);
+      } catch (err) {
+        notify('Approval Failed', err.message);
+      }
+    }
+
+    // Endpoint 9: POST /api/projects/:id/paypal/draft
+    async function handleCreateDraftInvoiceAction() {
+      const project = getActiveProject();
+      if (!project) return;
+
+      try {
+        const { data } = await apiFetch('/api/projects/' + encodeURIComponent(project.id) + '/paypal/draft', {
+          method: 'POST',
+          body: { allowDevFixture: !state.isRealPayPal }
+        });
+        upsertLocalStateProject(data.project);
+        renderWorkspace();
+        if (data.duplicatePrevented) {
+          notify('Duplicate Invoice Prevented', data.message || 'Invoice already exists for this project.');
+        } else {
+          notify('Draft Invoice Created', 'Created Invoice #' + data.project.paypalInvoice.invoiceNumber + '.');
+        }
+      } catch (err) {
+        notify('Invoice Creation Failed', err.message);
+      }
+    }
+
+    // Endpoint 10: POST /api/projects/:id/paypal/send
+    function openConfirmSendInvoiceModal() {
+      const project = getActiveProject();
+      if (!project || !project.paypalInvoice) {
+        notify('Generate Draft First', 'Click "Generate PayPal Draft Invoice" first.');
+        return;
+      }
+      const inv = project.paypalInvoice;
+      document.getElementById('modal-send-summary').innerHTML =
+        '<div><strong>Invoice Number:</strong> #' + inv.invoiceNumber + ' (' + inv.invoiceId + ')</div>' +
+        '<div><strong>Recipient:</strong> ' + project.scope.clientName + ' (' + project.scope.clientEmail + ')</div>' +
+        '<div><strong>Amount Due:</strong> ' + inv.currency + ' $' + inv.totalAmount + '</div>' +
+        '<div><strong>Mode:</strong> ' + state.connectionLabel + '</div>';
+      const modal = document.getElementById('modal-send-invoice');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeConfirmSendInvoiceModal() {
+      const modal = document.getElementById('modal-send-invoice');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function confirmSendInvoiceAction() {
+      if (!document.getElementById('checkbox-confirm-send').checked) {
+        notify('Confirmation Required', 'Please check the box to authorize sending the invoice.');
+        return;
+      }
+      const project = getActiveProject();
+      if (!project) return;
+
+      try {
+        const { data } = await apiFetch('/api/projects/' + encodeURIComponent(project.id) + '/paypal/send', {
+          method: 'POST',
+          body: { confirmSend: true, allowDevFixture: !state.isRealPayPal }
+        });
+        upsertLocalStateProject(data.project);
+        closeConfirmSendInvoiceModal();
+        notify('Invoice Sent', 'Dispatched Invoice #' + data.project.paypalInvoice.invoiceNumber + ' via backend.');
+        openProjectStep(5);
+      } catch (err) {
+        notify('Send Invoice Failed', err.message);
+      }
+    }
+
+    // Endpoint 11: POST /api/projects/:id/paypal/sync
+    async function handleCheckInvoiceStatusAction() {
+      const project = getActiveProject();
+      if (!project || !project.paypalInvoice) {
+        notify('No Invoice Yet', 'Generate an invoice in Step 4 first.');
+        return;
+      }
+
+      try {
+        const { data } = await apiFetch('/api/projects/' + encodeURIComponent(project.id) + '/paypal/sync', {
+          method: 'POST',
+          body: { allowDevFixture: !state.isRealPayPal }
+        });
+        upsertLocalStateProject(data.project);
+        renderWorkspace();
+        notify('Status Synced', 'Invoice status is ' + data.project.paypalInvoice.status + '.');
+      } catch (err) {
+        notify('Sync Failed', err.message);
+      }
+    }
+
+    function handleDraftReminderFromStep5() {
+      switchNav('assistant');
+      sendAssistantPrompt('Draft a polite payment reminder.');
+    }
+
+    // ----------------------------------------------------------------------
+    // 4. Conversational AI Assistant (`POST /api/agent/chat` & `/api/agent/approve`)
+    // ----------------------------------------------------------------------
+    function askAiFromDashboard(promptText) {
+      switchNav('assistant');
+      sendAssistantPrompt(promptText);
+    }
+
+    function sendAssistantInput() {
+      const input = document.getElementById('assistant-chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      sendAssistantPrompt(text);
+    }
+
+    // Endpoint 4: POST /api/agent/chat
+    async function sendAssistantPrompt(promptText) {
+      const project = getActiveProject();
+      if (!project) return;
+
+      state.chatMessages.push({
+        role: 'user',
+        text: promptText,
+        timestamp: new Date().toISOString()
+      });
+      renderWorkspace();
+
+      try {
+        const { data } = await apiFetch('/api/agent/chat', {
+          method: 'POST',
+          body: {
+            projectId: project.id,
+            message: promptText
+          }
+        });
+        upsertLocalStateProject(data.project);
+        if (data.pendingApproval) {
+          state.pendingApproval = data.pendingApproval;
+        }
+        state.chatMessages.push({
+          role: 'assistant',
+          text: data.reply,
+          timestamp: new Date().toISOString()
+        });
+        renderWorkspace();
+      } catch (err) {
+        state.chatMessages.push({
+          role: 'assistant',
+          text: 'Error: ' + err.message,
+          timestamp: new Date().toISOString()
+        });
+        renderWorkspace();
+      }
+    }
+
+    // Endpoint 6: POST /api/agent/approve (`decision: 'APPROVE'`)
+    async function approvePendingAgentAction() {
+      const pending = state.pendingApproval;
+      const project = getActiveProject();
+      if (!pending || !project) return;
+
+      try {
+        const { data } = await apiFetch('/api/agent/approve', {
+          method: 'POST',
+          body: {
+            projectId: project.id,
+            approvalId: pending.id,
+            decision: 'APPROVE',
+            args: { approverName: 'Alex Rivera', allowSimulatedFixture: !state.isRealPayPal }
+          }
+        });
+        upsertLocalStateProject(data.project);
+        state.pendingApproval = null;
+        state.chatMessages.push({
+          role: 'assistant',
+          text: 'Approved and executed ' + pending.toolName + '() on the backend.',
+          timestamp: new Date().toISOString()
+        });
+        renderWorkspace();
+        notify('Action Approved & Executed', 'Completed ' + pending.toolName + '().');
+      } catch (err) {
+        notify('Approval Execution Error', err.message);
+      }
+    }
+
+    // Endpoint 6: POST /api/agent/approve (`decision: 'REJECT'`)
+    async function rejectPendingAgentAction() {
+      const pending = state.pendingApproval;
+      const project = getActiveProject();
+      if (!pending || !project) return;
+
+      try {
+        const { data } = await apiFetch('/api/agent/approve', {
+          method: 'POST',
+          body: {
+            projectId: project.id,
+            approvalId: pending.id,
+            decision: 'REJECT'
+          }
+        });
+        upsertLocalStateProject(data.project);
+        state.pendingApproval = null;
+        state.chatMessages.push({
+          role: 'assistant',
+          text: 'Cancelled ' + pending.toolName + '() — no changes were made.',
+          timestamp: new Date().toISOString()
+        });
+        renderWorkspace();
+      } catch (err) {
+        notify('Cancel Error', err.message);
+      }
+    }
+
+    async function loadSampleFreelancerProjects() {
+      const existingTitles = new Set(state.projects.map((p) => p.scope.projectTitle));
+      for (const preset of Object.values(FREELANCER_PRESETS)) {
+        if (!existingTitles.has(preset.projectTitle)) {
+          try {
+            const { data } = await apiFetch('/api/projects/extract', {
+              method: 'POST',
+              body: preset
+            });
+            upsertLocalStateProject(data.project);
+          } catch {
+            // Ignore individual error
+          }
+        }
+      }
+      renderWorkspace();
+      notify('Sample Briefs Loaded', 'Created and analyzed sample freelancer projects via POST /api/projects/extract.');
+    }
+
+    // ----------------------------------------------------------------------
+    // 5. Developer Section & Webhook Security Guard Tests (`POST /api/webhooks/paypal`)
+    // ----------------------------------------------------------------------
+    function toggleDeveloperSection() {
+      state.devPanelOpen = !state.devPanelOpen;
+      const panel = document.getElementById('developer-advanced-panel');
+      const btn = document.getElementById('btn-toggle-dev-panel');
+      if (state.devPanelOpen) {
+        panel.classList.remove('hidden');
+        btn.textContent = 'Hide Developer Tools';
+      } else {
+        panel.classList.add('hidden');
+        btn.textContent = 'Show Developer Tools';
+      }
+    }
+
+    // Endpoint 12: POST /api/webhooks/paypal (Simulated event guard test -> HTTP 422)
+    async function runDevSimulatedWebhookTest() {
+      const out = document.getElementById('dev-webhook-test-output');
+      const project = getActiveProject();
+      const invId = project?.paypalInvoice?.invoiceId || 'SIM-INV-1043';
+
+      try {
+        await apiFetch('/api/webhooks/paypal', {
+          method: 'POST',
+          headers: { 'x-p2p-fixture-webhook': 'true' },
+          body: {
+            id: 'WH-SIM-' + Date.now(),
+            event_type: 'INVOICING.INVOICE.PAID',
+            resource: { invoice: { id: invId, status: 'PAID' } }
+          }
+        });
+      } catch (err) {
+        out.textContent =
+          '[HTTP ' +
+          (err.status || 422) +
+          ' BLOCKED] ' +
+          err.message +
+          '\nVerified: Simulated events are never treated as real payment confirmation.';
+        notify('Simulated Payment Blocked', 'Backend returned HTTP ' + (err.status || 422) + ' as expected.');
+      }
+    }
+
+    // Endpoint 12: POST /api/webhooks/paypal (Spoofed signature guard test -> HTTP 401)
+    async function runDevSpoofedWebhookTest() {
+      const out = document.getElementById('dev-webhook-test-output');
+      const project = getActiveProject();
+      const invId = project?.paypalInvoice?.invoiceId || 'INV2-TEST-001';
+
+      try {
+        await apiFetch('/api/webhooks/paypal', {
+          method: 'POST',
+          body: {
+            id: 'WH-SPOOF-' + Date.now(),
+            event_type: 'INVOICING.INVOICE.PAID',
+            resource: { invoice: { id: invId, status: 'PAID' } }
+          }
+        });
+      } catch (err) {
+        out.textContent =
+          '[HTTP ' +
+          (err.status || 401) +
+          ' BLOCKED] ' +
+          err.message +
+          '\nVerified: Unauthenticated webhook payload rejected.';
+        notify('Unverified Webhook Rejected', 'Backend returned HTTP ' + (err.status || 401) + ' as expected.');
+      }
+    }
+
+    // ----------------------------------------------------------------------
+    // 6. Render Workspace UI
+    // ----------------------------------------------------------------------
+    function renderStatusBadgesOnly(project) {
+      const headerText = document.getElementById('header-connection-text');
+      const step4Badge = document.getElementById('step4-connection-badge');
+      headerText.textContent = state.connectionLabel;
+      step4Badge.textContent = 'Mode: ' + state.connectionLabel;
+
+      if (!project) return;
+      const badge = document.getElementById('project-status-badge');
+      const step3Pill = document.getElementById('step3-lock-status-pill');
+      const labelMap = {
+        DRAFT_SCOPE: 'Draft Scope (Unlocked)',
+        HUMAN_APPROVED: 'Scope Locked & Approved',
+        PAYPAL_DRAFT_CREATED: 'Invoice Draft Created',
+        INVOICE_SENT: 'Invoice Sent (Pending Payment)',
+        PAID: 'Paid (Verified)'
+      };
+      badge.textContent = labelMap[project.state] || project.state;
+      step3Pill.textContent = project.scopeLock
+        ? 'Locked (v' + project.scopeLock.version + ' by ' + project.scopeLock.approvedBy + ')'
+        : 'Unlocked Draft';
+      step3Pill.className = project.scopeLock
+        ? 'rounded-full bg-emerald-100 px-3.5 py-1 text-xs font-semibold text-emerald-800'
+        : 'rounded-full bg-amber-100 px-3.5 py-1 text-xs font-semibold text-amber-800';
+      document.getElementById('edit-total-cost').textContent = 'USD $' + Number(project.scope.totalAmount || 0).toFixed(2);
+    }
+
+    function renderWorkspace() {
+      const project = getActiveProject();
+      renderStatusBadgesOnly(project);
+      if (!project) return;
+
+      const details = project.analysisDetails || {
+        extractedRequirements: (project.scope.deliverables || []).map((d) => d.title),
+        deadlineLabel: project.scope.deadline,
+        quotedPriceLabel: 'USD $' + Number(project.scope.totalAmount || 0).toFixed(2),
+        ambiguousStatements: [],
+        missingInformation: [],
+        scopeCreepWarnings: [],
+        additionalCharges: []
+      };
+
+      const pendingCount = state.projects.filter(
+        (p) => p.paypalInvoice && (p.paypalInvoice.status === 'DRAFT' || p.paypalInvoice.status === 'SENT')
+      ).length;
+      const paidCount = state.projects.filter(
+        (p) => p.paypalInvoice && p.paypalInvoice.paymentVerifiedAuthentic
+      ).length;
+      const outstandingSum = state.projects
+        .filter((p) => p.paypalInvoice && p.paypalInvoice.status === 'SENT' && !p.paypalInvoice.paymentVerifiedAuthentic)
+        .reduce((s, p) => s + Number(p.paypalInvoice.dueAmount || 0), 0);
+      const draftScopeSum = state.projects
+        .filter((p) => !p.paypalInvoice)
+        .reduce((s, p) => s + Number(p.scope.totalAmount || 0), 0);
+
+      document.getElementById('dash-metric-projects').textContent = String(state.projects.length);
+      document.getElementById('dash-metric-pending').textContent = String(pendingCount);
+      document.getElementById('dash-metric-paid').textContent = String(paidCount);
+      document.getElementById('dash-metric-outstanding').textContent = '$' + outstandingSum.toFixed(2);
+      document.getElementById('dash-metric-scoped-sub').textContent = '$' + draftScopeSum.toFixed(2) + ' in draft scopes';
+      document.getElementById('dash-active-project-pill').textContent = 'Active Project: ' + project.scope.projectTitle;
+      document.getElementById('ai-active-project-label').textContent = 'Project: ' + project.scope.projectTitle;
+
+      const aiMeta = project.extractionMeta || {};
+      const providerPill = document.getElementById('analysis-ai-provider-pill');
+      if (providerPill) {
+        providerPill.textContent = aiMeta.liveAiUsed
+          ? 'Live AI: ' + aiMeta.provider + ' (' + aiMeta.model + ')'
+          : 'Deterministic Fallback (' + (aiMeta.provider || 'local') + ')';
+      }
+
+      document.getElementById('dash-projects-list').innerHTML = state.projects
+        .map((p) => {
+          const isCurrent = p.id === project.id;
+          const statusLabel =
+            p.state === 'PAID'
+              ? '<span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">Paid</span>'
+              : p.state === 'INVOICE_SENT'
+              ? '<span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-semibold text-blue-800">Invoice Sent</span>'
+              : p.scopeLock
+              ? '<span class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">Scope Locked</span>'
+              : '<span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">Draft Scope</span>';
+
+          return (
+            '<div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ' +
+            (isCurrent ? 'border-blue-500 bg-blue-50/30' : 'border-slate-200 bg-white') +
+            '">' +
+            '<div>' +
+            '<div class="flex items-center gap-2">' +
+            '<span class="text-sm font-bold text-slate-900">' +
+            p.scope.projectTitle +
+            '</span>' +
+            statusLabel +
+            '</div>' +
+            '<div class="mt-0.5 text-xs text-slate-500">' +
+            p.scope.clientName +
+            ' • Deadline: ' +
+            p.scope.deadline +
+            ' • <strong>USD $' +
+            Number(p.scope.totalAmount || 0).toFixed(2) +
+            '</strong></div>' +
+            '</div>' +
+            '<div class="flex items-center gap-2">' +
+            '<button onclick="selectProjectAndOpenStep(\'' +
+            p.id +
+            '\', 2)" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Review Scope</button>' +
+            '<button onclick="selectProjectAndOpenStep(\'' +
+            p.id +
+            '\', 4)" class="rounded-lg bg-[#0070ba] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#005ea6]">Invoice</button>' +
+            '</div>' +
+            '</div>'
+          );
+        })
+        .join('');
+
+      const verifiedPaidProjects = state.projects.filter(
+        (p) => p.paypalInvoice && p.paypalInvoice.paymentVerifiedAuthentic
+      );
+      document.getElementById('dash-recent-payments').innerHTML =
+        verifiedPaidProjects.length > 0
+          ? verifiedPaidProjects
+              .map(
+                (p) =>
+                  '<div class="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 text-xs">' +
+                  '<div><div class="font-bold text-slate-900">' +
+                  p.scope.clientName +
+                  '</div><div class="text-slate-500">Invoice #' +
+                  p.paypalInvoice.invoiceNumber +
+                  '</div></div>' +
+                  '<div class="font-bold text-emerald-700">+$' +
+                  p.paypalInvoice.totalAmount +
+                  '</div></div>'
+              )
+              .join('')
+          : '<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">' +
+            'No verified payments yet. Payments appear here only after authentic PayPal API or cryptographically verified webhook confirmation.' +
+            '</div>';
+
+      const allAudits = state.projects
+        .flatMap((p) => (p.auditTrail || []).map((a) => ({ text: a.summary, timestamp: a.timestamp })))
+        .slice(-5)
+        .reverse();
+      document.getElementById('dash-recent-activity').innerHTML = allAudits
+        .map(
+          (a) =>
+            '<div class="flex items-start justify-between gap-2 border-b border-slate-100 pb-2 text-xs last:border-none">' +
+            '<span class="text-slate-700">' +
+            a.text +
+            '</span>' +
+            '<span class="shrink-0 text-[11px] text-slate-400">' +
+            new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
+            '</span></div>'
+        )
+        .join('');
+
+      document.getElementById('project-select-dropdown').innerHTML = state.projects
+        .map(
+          (p) =>
+            '<option value="' +
+            p.id +
+            '" ' +
+            (p.id === project.id ? 'selected' : '') +
+            '>' +
+            p.scope.projectTitle +
+            ' — ' +
+            p.scope.clientName +
+            ' ($' +
+            Number(p.scope.totalAmount || 0).toFixed(2) +
+            ')</option>'
+        )
+        .join('');
+
+      document.getElementById('analysis-price-display').textContent =
+        project.scope.currency + ' $' + Number(project.scope.totalAmount || 0).toFixed(2);
+      document.getElementById('analysis-price-sub').textContent = details.quotedPriceLabel || 'Quoted in message';
+      document.getElementById('analysis-deadline-display').textContent = project.scope.deadline;
+      document.getElementById('analysis-deadline-sub').textContent = details.deadlineLabel || project.scope.deadline;
+      document.getElementById('analysis-revisions-display').textContent =
+        project.scope.revisionLimit + ' Rounds Included';
+
+      document.getElementById('analysis-deliverables-list').innerHTML = (project.scope.deliverables || [])
+        .map(
+          (d) =>
+            '<li class="flex items-start gap-2 rounded-lg bg-slate-50 p-2.5">' +
+            '<span class="font-bold text-emerald-600">✓</span>' +
+            '<span class="font-medium text-slate-800">' +
+            d.title +
+            '</span></li>'
+        )
+        .join('');
+
+      document.getElementById('analysis-missing-list').innerHTML =
+        (details.missingInformation || []).length > 0
+          ? details.missingInformation.map((m) => '<li>' + m + '</li>').join('')
+          : '<li>All core details were provided in the brief.</li>';
+
+      const warningsHtml = [
+        ...(details.ambiguousStatements || []).map(
+          (a) =>
+            '<div class="rounded-lg border border-amber-200 bg-white p-3 text-xs">' +
+            '<div class="font-bold text-amber-900">Client Quote: "' +
+            a.quote +
+            '"</div>' +
+            '<div class="mt-0.5 text-slate-600">' +
+            a.issue +
+            '</div></div>'
+        ),
+        ...(details.scopeCreepWarnings || []).map(
+          (w) =>
+            '<div class="rounded-lg border border-amber-200 bg-white p-3 text-xs text-slate-700">' +
+            '<strong class="text-amber-900">Scope Creep Warning:</strong> ' +
+            w +
+            '</div>'
+        )
+      ].join('');
+      document.getElementById('analysis-warnings-list').innerHTML =
+        warningsHtml || '<div class="text-xs text-slate-600">No ambiguous statements detected.</div>';
+
+      document.getElementById('analysis-addons-list').innerHTML =
+        (details.additionalCharges || []).length > 0
+          ? details.additionalCharges
+              .map(
+                (a, idx) =>
+                  '<div class="rounded-xl border border-blue-200 bg-white p-3.5 text-xs">' +
+                  '<div class="flex items-center justify-between font-bold text-slate-900">' +
+                  '<span>' +
+                  a.title +
+                  '</span>' +
+                  '<span class="text-blue-700">+USD $' +
+                  Number(a.suggestedPrice || 0).toFixed(2) +
+                  '</span></div>' +
+                  '<p class="mt-1 text-slate-600">' +
+                  a.reason +
+                  '</p>' +
+                  '<div class="mt-2.5 flex flex-wrap gap-2">' +
+                  '<button onclick="addSuggestedChargeToScope(' +
+                  idx +
+                  ')" class="rounded-lg bg-[#0070ba] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#005ea6]">+ Add $' +
+                  a.suggestedPrice +
+                  ' to Scope</button>' +
+                  '<button onclick="keepChargeExcluded(' +
+                  idx +
+                  ')" class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-100">Keep Excluded from Base Price</button>' +
+                  '</div></div>'
+              )
+              .join('')
+          : '<div class="text-xs text-slate-600">No extra charges suggested.</div>';
+
+      document.getElementById('edit-project-title').value = project.scope.projectTitle;
+      document.getElementById('edit-deadline').value = project.scope.deadline;
+      document.getElementById('edit-client-name').value = project.scope.clientName;
+      document.getElementById('edit-client-email').value = project.scope.clientEmail;
+      document.getElementById('edit-payment-terms').value = project.scope.paymentTerms;
+      document.getElementById('edit-revision-limit').value = project.scope.revisionLimit;
+      document.getElementById('edit-deliverables').value = (project.scope.deliverables || [])
+        .map((d) => d.title)
+        .join('\n');
+      document.getElementById('edit-exclusions').value = (project.scope.exclusions || []).join('\n');
+
+      document.getElementById('edit-line-items-tbody').innerHTML = (project.scope.lineItems || [])
+        .map((item, idx) => {
+          const sub = (Number(item.quantity || 1) * Number(item.unitPrice || 0)).toFixed(2);
+          return (
+            '<tr>' +
+            '<td class="px-3.5 py-2">' +
+            '<input type="text" value="' +
+            String(item.name).replace(/"/g, '&quot;') +
+            '" onchange="updateScopeLineItem(' +
+            idx +
+            ', \'name\', this.value)" class="w-full rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-900" />' +
+            '</td>' +
+            '<td class="px-2 py-2 text-right">' +
+            '<input type="number" min="1" value="' +
+            item.quantity +
+            '" onchange="updateScopeLineItem(' +
+            idx +
+            ', \'quantity\', this.value)" class="w-16 rounded-lg border border-slate-200 px-2 py-1 text-right text-xs text-slate-900" />' +
+            '</td>' +
+            '<td class="px-2 py-2 text-right">' +
+            '<input type="number" min="0" step="0.01" value="' +
+            item.unitPrice +
+            '" onchange="updateScopeLineItem(' +
+            idx +
+            ', \'unitPrice\', this.value)" class="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right text-xs text-slate-900" />' +
+            '</td>' +
+            '<td class="px-3.5 py-2 text-right font-semibold text-slate-900">$' +
+            sub +
+            '</td>' +
+            '<td class="px-2 py-2 text-center">' +
+            (project.scope.lineItems.length > 1
+              ? '<button onclick="removeScopeLineItem(' + idx + ')" class="text-rose-500 hover:text-rose-700">✕</button>'
+              : '') +
+            '</td></tr>'
+          );
+        })
+        .join('');
+
+      const inv = project.paypalInvoice;
+      document.getElementById('step4-invoice-preview').innerHTML =
+        '<div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">' +
+        '<div>' +
+        '<div class="text-xs font-bold uppercase tracking-wider text-slate-400">PayPal Invoice Preview</div>' +
+        '<h3 class="mt-0.5 text-base font-bold text-slate-900">' +
+        project.scope.projectTitle +
+        '</h3>' +
+        '<p class="text-xs text-slate-600">Bill To: <strong>' +
+        project.scope.clientName +
+        '</strong> (' +
+        project.scope.clientEmail +
+        ')</p>' +
+        '</div>' +
+        '<div class="text-right text-xs">' +
+        '<div>Invoice #: <strong>' +
+        (inv ? inv.invoiceNumber : 'Generated on creation') +
+        '</strong></div>' +
+        '<div>Delivery Date: <strong>' +
+        project.scope.deadline +
+        '</strong></div>' +
+        '<div>Scope Status: <strong>' +
+        (project.scopeLock ? 'Locked (v' + project.scopeLock.version + ')' : 'Unlocked — Approve in Step 3') +
+        '</strong></div>' +
+        '</div></div>' +
+        '<div class="mt-3 space-y-1.5 text-xs">' +
+        (project.scope.lineItems || [])
+          .map(
+            (li) =>
+              '<div class="flex justify-between text-slate-700"><span>' +
+              li.name +
+              ' (×' +
+              li.quantity +
+              ')</span><span class="font-semibold">USD $' +
+              (Number(li.quantity || 1) * Number(li.unitPrice || 0)).toFixed(2) +
+              '</span></div>'
+          )
+          .join('') +
+        '<div class="flex justify-between border-t border-slate-200 pt-2 text-sm font-bold text-slate-900"><span>Total Amount Due</span><span>USD $' +
+        Number(project.scope.totalAmount || 0).toFixed(2) +
+        '</span></div></div>';
+
+      document.getElementById('btn-create-invoice').disabled = !project.scopeLock;
+      document.getElementById('btn-send-invoice').disabled = !inv || inv.status !== 'DRAFT';
+
+      const step5Box = document.getElementById('step5-payment-details');
+      if (!inv) {
+        step5Box.innerHTML =
+          '<div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-xs text-slate-500">' +
+          'No invoice generated yet for this project. Complete Step 3 (Lock Scope) and Step 4 (Generate Invoice) first.' +
+          '</div>';
+      } else {
+        step5Box.innerHTML =
+  (inv.status === 'DRAFT'
+    ? '<div class="mb-4"><button type="button" onclick="openConfirmSendInvoiceModal()" class="rounded-lg bg-[#0070ba] px-4 py-2 text-xs font-semibold text-white hover:bg-[#005ea6]">Review &amp; Send Invoice</button></div>'
+    : '') +
+  '<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">' +
+          '<div class="rounded-xl border border-slate-200 bg-slate-50 p-4">' +
+          '<div class="text-xs text-slate-500">Invoice Status</div>' +
+          '<div class="mt-1 text-base font-bold text-slate-900">' +
+          inv.status +
+          ' (#' +
+          inv.invoiceNumber +
+          ')</div>' +
+          '<div class="mt-0.5 text-[11px] text-slate-500">ID: ' +
+          inv.invoiceId +
+          '</div></div>' +
+          '<div class="rounded-xl border border-slate-200 bg-slate-50 p-4">' +
+          '<div class="text-xs text-slate-500">Amount Due</div>' +
+          '<div class="mt-1 text-base font-bold text-slate-900">' +
+          inv.currency +
+          ' $' +
+          inv.dueAmount +
+          '</div>' +
+          '<div class="mt-0.5 text-[11px] text-slate-500">Created: ' +
+          new Date(inv.createdAt).toLocaleDateString() +
+          '</div></div>' +
+          '<div class="rounded-xl border border-slate-200 bg-slate-50 p-4">' +
+          '<div class="text-xs text-slate-500">Payment Confirmation</div>' +
+          '<div class="mt-1 text-base font-bold ' +
+          (inv.paymentVerifiedAuthentic ? 'text-emerald-700' : 'text-amber-700') +
+          '">' +
+          (inv.paymentVerifiedAuthentic ? 'Verified PAID (PayPal)' : 'Pending Authentic Verification') +
+          '</div>' +
+          '<div class="mt-0.5 text-[11px] text-slate-500">' +
+          (inv.isFixture ? 'Local Demo / Fixture Mode (Simulated)' : 'Connected PayPal Sandbox Mode') +
+          '</div></div></div>' +
+          '<div class="mt-4 rounded-xl border border-slate-200 p-4 text-xs">' +
+          '<div class="font-semibold text-slate-800">Client Payment Link:</div>' +
+          '<div class="mt-1 font-mono text-slate-600">' +
+          (inv.isFixture
+            ? 'Simulated Fixture Preview (' + inv.invoiceId + ') — Configure PayPal Sandbox credentials in server .env to generate a live sandbox.paypal.com payer link.'
+            : '<a href="' + inv.payerViewUrl + '" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">' + inv.payerViewUrl + '</a>') +
+          '</div></div>';
+      }
+
+      renderAssistantView(project);
+      updateInvoicesGrid();
+
+      const devPre = document.getElementById('dev-paypal-json-preview');
+      if (devPre) {
+        devPre.textContent = JSON.stringify(
+          {
+            detail: {
+              currency_code: project.scope.currency,
+              payment_term: { term_type: project.scope.paymentTerms },
+              note: 'Approved Scope of Work (' + project.scope.revisionLimit + ' revisions included).'
+            },
+            primary_recipients: [{ billing_info: { email_address: project.scope.clientEmail } }],
+            items: project.scope.lineItems
+          },
+          null,
+          2
+        );
+      }
+    }
+
+    function renderAssistantView(project) {
+      const chatBox = document.getElementById('assistant-chat-history');
+      if (state.chatMessages.length === 0) {
+        chatBox.innerHTML =
+          '<div class="rounded-xl bg-white p-3.5 text-xs text-slate-700 shadow-sm ring-1 ring-slate-200/70">' +
+          '<strong>AI Business Assistant:</strong> Hi Alex! Select any prompt above or ask me to analyze your client\'s requirements, check what is missing, calculate extra charges, lock your scope, generate an invoice, or draft a polite payment reminder.' +
+          '</div>';
+      } else {
+        chatBox.innerHTML = state.chatMessages
+          .map((m) =>
+            m.role === 'user'
+              ? '<div class="ml-8 rounded-xl bg-[#0070ba] p-3 text-xs text-white">' + m.text + '</div>'
+              : '<div class="mr-6 whitespace-pre-line rounded-xl bg-white p-3.5 text-xs text-slate-800 shadow-sm ring-1 ring-slate-200">' +
+                m.text +
+                '</div>'
+          )
+          .join('');
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      const approvalBox = document.getElementById('assistant-pending-approval-box');
+      const navBadge = document.getElementById('nav-approval-badge');
+      if (state.pendingApproval) {
+        approvalBox.classList.remove('hidden');
+        navBadge.classList.remove('hidden');
+        approvalBox.innerHTML =
+          '<div class="flex flex-wrap items-center justify-between gap-2">' +
+          '<span class="text-xs font-bold text-amber-950">' +
+          state.pendingApproval.title +
+          '</span>' +
+          '<span class="rounded bg-amber-200 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-900">Requires Human Approval (' +
+          state.pendingApproval.id +
+          ')</span>' +
+          '</div>' +
+          '<p class="mt-1 text-xs text-amber-900">' +
+          state.pendingApproval.explanation +
+          '</p>' +
+          '<div class="mt-3 flex gap-2">' +
+          '<button onclick="approvePendingAgentAction()" class="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-500">Approve &amp; Execute</button>' +
+          '<button onclick="rejectPendingAgentAction()" class="rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100">Cancel</button>' +
+          '</div>';
+      } else {
+        approvalBox.classList.add('hidden');
+        navBadge.classList.add('hidden');
+      }
+
+      const logBox = document.getElementById('assistant-execution-log');
+      const logs = [...(project.agentExecutionLog || [])].reverse();
+      logBox.innerHTML = logs
+        .map(
+          (l) =>
+            '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">' +
+            '<div class="flex items-center justify-between">' +
+            '<span class="font-mono font-bold text-blue-700">' +
+            l.toolSelected +
+            '()</span>' +
+            '<span class="rounded px-2 py-0.5 text-[10px] font-semibold ' +
+            (l.humanApprovalStatus === 'APPROVED_BY_HUMAN'
+              ? 'bg-emerald-100 text-emerald-800'
+              : l.humanApprovalStatus === 'PENDING_HUMAN_APPROVAL'
+              ? 'bg-amber-100 text-amber-800'
+              : 'bg-slate-200 text-slate-700') +
+            '">' +
+            l.humanApprovalStatus +
+            '</span></div>' +
+            '<p class="mt-1 text-slate-700">' +
+            l.reasoningSummary +
+            '</p>' +
+            '<div class="mt-1.5 rounded bg-white p-2 font-mono text-[10px] text-slate-600 ring-1 ring-slate-200/70">' +
+            'Args: ' +
+            JSON.stringify(l.toolArguments) +
+            '<br/>Result: ' +
+            JSON.stringify(l.toolResult) +
+            '</div></div>'
+        )
+        .join('');
+    }
+
+    function selectProjectAndOpenStep(projectId, stepNum) {
+      state.activeProjectId = projectId;
+      openProjectStep(stepNum);
+    }
+
+    // ----------------------------------------------------------------------
+    // 7. Invoices AG Grid Table
+    // ----------------------------------------------------------------------
+    function initInvoicesGrid() {
+      const gridDiv = document.getElementById('invoices-ag-grid');
+      if (!gridDiv || !window.agGrid) return;
+
+      const columnDefs = [
+        { headerName: 'Project', field: 'projectTitle', flex: 1.4, minWidth: 180 },
+        { headerName: 'Client', field: 'clientName', flex: 1.2, minWidth: 160 },
+        { headerName: 'Amount', field: 'amountFormatted', width: 120 },
+        { headerName: 'Invoice #', field: 'invoiceNumber', width: 130 },
+        { headerName: 'Invoice Status', field: 'invoiceStatus', width: 150 },
+        { headerName: 'Due Date', field: 'deadline', width: 120 },
+        {
+          headerName: 'Action',
+          field: 'id',
+          width: 140,
+          cellRenderer: (params) =>
+            '<button onclick="selectProjectAndOpenStep(\'' +
+            params.value +
+            '\', 5)" class="rounded bg-[#0070ba] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#005ea6]">Manage</button>'
+        }
+      ];
+
+      state.gridApi = window.agGrid.createGrid(gridDiv, {
+        columnDefs,
+        rowData: getInvoicesGridRows(),
+        defaultColDef: { sortable: true, filter: true, resizable: true }
+      });
+    }
+
+    function getInvoicesGridRows() {
+      return state.projects.map((p) => ({
+        id: p.id,
+        projectTitle: p.scope.projectTitle,
+        clientName: p.scope.clientName,
+        amountFormatted: 'USD $' + Number(p.scope.totalAmount || 0).toFixed(2),
+        invoiceNumber: p.paypalInvoice ? '#' + p.paypalInvoice.invoiceNumber : 'No Invoice Yet',
+        invoiceStatus: p.paypalInvoice
+          ? p.paypalInvoice.paymentVerifiedAuthentic
+            ? 'PAID (Verified)'
+            : p.paypalInvoice.status
+          : p.scopeLock
+          ? 'Scope Locked'
+          : 'Draft Scope',
+        deadline: p.scope.deadline
+      }));
+    }
+
+    function updateInvoicesGrid() {
+      if (state.gridApi && state.gridApi.setGridOption) {
+        state.gridApi.setGridOption('rowData', getInvoicesGridRows());
+      }
+    }
+
+    function filterInvoicesGrid(text) {
+      if (state.gridApi && state.gridApi.setGridOption) {
+        state.gridApi.setGridOption('quickFilterText', text);
+      }
+    }
+
+    function exportInvoicesCsv() {
+      if (state.gridApi && state.gridApi.exportDataAsCsv) {
+        state.gridApi.exportDataAsCsv({ fileName: 'freelancer-invoices.csv' });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initInvoicesGrid();
+      bootstrapFromBackend();
+    });
+  </script>
+</body>
+</html>

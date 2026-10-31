@@ -1,0 +1,29 @@
+{
+  "name": "proof-to-pay",
+  "version": "2.0.0",
+  "description": "Proof-to-Pay: Human-controlled ReAct AI Scope-to-Invoice & Consumer Protection Commerce Agent using PayPal Sandbox Invoicing v2, Orders v2 Checkout, Cryptographic Webhooks, and AG Grid Command Center.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/server.mjs",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "test": "node --test test/proof-to-pay.test.mjs",
+    "verify": "node --test test/proof-to-pay.test.mjs",
+    "verify:sandbox": "node scripts/verify-live-paypal-sandbox.mjs"
+  },
+  "keywords": [
+    "paypal",
+    "paypal-invoicing-api",
+    "paypal-orders-v2",
+    "agentic-commerce",
+    "consumer-protection",
+    "freelancer",
+    "scope-of-work",
+    "ag-grid",
+    "paypal-ai-hackathon"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
