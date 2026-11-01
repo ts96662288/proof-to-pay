@@ -1,8 +1,8 @@
 /**
- * Proof-to-Pay v3.2 — Secure HTTP Server & REST API Controller (`src/server.mjs`)
+ * Proof-to-Pay v3.2.0 — Secure HTTP Server & REST API Controller (`src/server.mjs`)
  *
  * Implements all core & SaaS Workspace endpoints + security hardening:
- * - `GET  /api/health` (Single source of truth for PayPal status, AI provider, and Workspace Settings)
+ * - `GET  /api/health` (Single source of truth for version 3.2.0, PayPal status, AI provider, and Workspace Settings)
  * - `GET  /api/paypal/test-connection` & `POST /api/paypal/test-connection`
  * - `GET  /api/settings` & `PUT /api/settings` (Persistent Workspace Preferences, Notifications, Security)
  * - `GET  /api/audit-logs` (Unified Audit Trail across projects)
@@ -15,7 +15,7 @@
  * - `PUT  /api/projects/:id/scope`, `POST /api/projects/:id/approve`
  * - `POST /api/projects/:id/paypal/draft`, `POST /api/projects/:id/paypal/send`,
  *   `POST /api/projects/:id/paypal/remind`, `POST /api/projects/:id/paypal/cancel`, `POST /api/projects/:id/paypal/sync`
- * - `POST /api/webhooks/paypal`
+ * - `POST /api/webhooks/paypal` (Separate PayPal cryptographic RSA signature verification flow)
  */
 
 import http from 'node:http';
@@ -46,7 +46,7 @@ import {
   approvePendingToolAction,
   handleAgentConversation
 } from './agent-tools.mjs';
-import { ProjectStore, DEMO_BRIEFS, DEFAULT_OWNER_ID } from './store.mjs';
+import { ProjectStore, DEMO_BRIEFS, DEFAULT_OWNER_ID, APP_VERSION } from './store.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -72,7 +72,11 @@ export function createAppServer(deps = {}) {
   const store = deps.store || new ProjectStore(deps.dataPath);
   const paypalClient = deps.paypalClient || new PayPalSandboxClient(deps.paypalConfig);
   const publicDir = deps.publicDir || path.resolve(__dirname, '../public');
-  const requiredApiKey = deps.apiKey ?? process.env.FREELANCER_API_KEY ?? '';
+  const requiredApiKey = String(deps.apiKey ?? process.env.FREELANCER_API_KEY ?? '').trim();
+  const isPublicDeployment = Boolean(
+    deps.publicDeployment ??
+      (process.env.NODE_ENV === 'production' || process.env.PUBLIC_DEPLOYMENT === 'true')
+  );
   const rateLimitMax = Number(deps.rateLimitMaxPerMinute || process.env.RATE_LIMIT_MAX_PER_MIN || 180);
   const allowedOrigins = new Set(
     (deps.allowedOrigins || process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
@@ -81,9 +85,10 @@ export function createAppServer(deps = {}) {
       .filter(Boolean)
   );
 
-  // Sync initial saved workspace invoicer preferences with PayPal client
+  // Sync saved workspace invoicer preferences with PayPal client only when user customized them
+  // (do not let default demo workspace identity overwrite explicit .env PayPal invoicer settings)
   const savedWs = store.getSettings()?.workspace;
-  if (savedWs) {
+  if (savedWs && !savedWs.isDemoIdentity) {
     paypalClient.updateInvoicerConfig({
       businessName: savedWs.workspaceName,
       freelancerName: savedWs.freelancerName,
@@ -143,22 +148,41 @@ export function createAppServer(deps = {}) {
       });
     }
 
-    // 3. Authentication & Project Ownership Context (for /api/* except PayPal webhook callbacks)
+    // 3. API Authentication & Public Deployment Guard
+    // Note: POST /api/webhooks/paypal uses its separate PayPal cryptographic signature verification flow.
     const reqOwnerId = String(req.headers['x-freelancer-id'] || DEFAULT_OWNER_ID).trim();
-    if (pathname.startsWith('/api/') && pathname !== '/api/webhooks/paypal' && requiredApiKey) {
-      const authHeader = String(req.headers.authorization || '');
-      const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-      const keyHeader = String(req.headers['x-freelancer-key'] || '').trim();
-      if (bearerToken !== requiredApiKey && keyHeader !== requiredApiKey) {
+    if (pathname.startsWith('/api/') && pathname !== '/api/webhooks/paypal') {
+      const isSensitiveOperation =
+        req.method !== 'GET' ||
+        pathname.startsWith('/api/export/') ||
+        pathname.startsWith('/api/backup/') ||
+        pathname === '/api/audit-logs' ||
+        pathname === '/api/settings';
+
+      // In public/production deployment, NEVER silently allow sensitive API operations without authentication
+      if (isPublicDeployment && !requiredApiKey && isSensitiveOperation) {
         return sendJson(res, 401, {
-          error: 'Unauthorized: Valid Authorization Bearer token or X-Freelancer-Key header is required.',
-          code: 'UNAUTHORIZED'
+          error:
+            'Authentication required for public deployment: Configure FREELANCER_API_KEY in server .env and supply Authorization: Bearer <key> or X-Freelancer-Key header.',
+          code: 'AUTH_REQUIRED_FOR_PUBLIC_DEPLOYMENT'
         });
+      }
+
+      if (requiredApiKey) {
+        const authHeader = String(req.headers.authorization || '');
+        const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+        const keyHeader = String(req.headers['x-freelancer-key'] || '').trim();
+        if (bearerToken !== requiredApiKey && keyHeader !== requiredApiKey) {
+          return sendJson(res, 401, {
+            error: 'Unauthorized: Valid Authorization Bearer token or X-Freelancer-Key header is required.',
+            code: 'UNAUTHORIZED'
+          });
+        }
       }
     }
 
     try {
-      // Endpoint 1: GET /api/health (Single Source of Truth for PayPal, AI, Tools, and Settings)
+      // Endpoint 1: GET /api/health (Single Source of Truth for Version, PayPal, AI, Tools, and Settings)
       if (req.method === 'GET' && pathname === '/api/health') {
         const geminiConfigured = Boolean(
           process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes('your_')
@@ -169,6 +193,7 @@ export function createAppServer(deps = {}) {
         const aiConfigured = geminiConfigured || openaiConfigured;
         return sendJson(res, 200, {
           status: 'ok',
+          version: APP_VERSION,
           service: 'Proof-to-Pay Freelancer Business Assistant',
           timestamp: new Date().toISOString(),
           paypal: paypalClient.getCredentialStatus(),
@@ -368,7 +393,6 @@ export function createAppServer(deps = {}) {
           paypalClient,
           reasoningSummary: 'Automatically ran identify_ambiguities() to flag unclear requirements and missing info.'
         });
-        // Re-apply workspace currency/due period after tool run
         if (wsPrefs.defaultCurrency) {
           project.scope.currency = wsPrefs.defaultCurrency;
         }
@@ -534,7 +558,7 @@ export function createAppServer(deps = {}) {
         }
       }
 
-      // Endpoint 12: POST /api/webhooks/paypal
+      // Endpoint 12: POST /api/webhooks/paypal (Separate cryptographic verification flow)
       if (req.method === 'POST' && pathname === '/api/webhooks/paypal') {
         const body = await readJsonBody(req);
         const outcome = await processPayPalWebhookEvent({
@@ -641,7 +665,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   server.listen(port, () => {
     const status = paypalClient.getCredentialStatus();
     console.log(`\n======================================================================`);
-    console.log(`  Proof-to-Pay v3.2 — AI Freelancer Fintech SaaS Platform`);
+    console.log(`  Proof-to-Pay v${APP_VERSION} — AI Freelancer Fintech SaaS Platform`);
     console.log(`  Local URL:        http://localhost:${port}`);
     console.log(`  PayPal Status:    ${status.headerDisplayLabel}`);
     console.log(`  Webhook Endpoint: POST http://localhost:${port}/api/webhooks/paypal`);

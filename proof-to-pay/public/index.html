@@ -59,8 +59,8 @@
       --border-strong: #cbd5e1;
       --accent-primary: #0070ba;
       --accent-hover: #005ea6;
-      --accent-soft: rgba(0, 112, 186, 0.1);
-      --accent-border: rgba(0, 112, 186, 0.35);
+      --accent-soft: rgba(0, 112, 186, 0.12);
+      --accent-border: #0070ba;
       --card-padding: 1.5rem;
       --section-gap: 1.5rem;
     }
@@ -81,31 +81,31 @@
       --accent-primary: #0070ba;
       --accent-hover: #005ea6;
       --accent-soft: rgba(0, 112, 186, 0.14);
-      --accent-border: rgba(0, 112, 186, 0.45);
+      --accent-border: #0070ba;
     }
     html[data-accent="indigo"] {
       --accent-primary: #4f46e5;
       --accent-hover: #4338ca;
       --accent-soft: rgba(79, 70, 229, 0.14);
-      --accent-border: rgba(79, 70, 229, 0.45);
+      --accent-border: #4f46e5;
     }
     html[data-accent="emerald"] {
       --accent-primary: #059669;
       --accent-hover: #047857;
       --accent-soft: rgba(5, 150, 105, 0.14);
-      --accent-border: rgba(5, 150, 105, 0.45);
+      --accent-border: #059669;
     }
     html[data-accent="violet"] {
       --accent-primary: #7c3aed;
       --accent-hover: #6d28d9;
       --accent-soft: rgba(124, 58, 237, 0.14);
-      --accent-border: rgba(124, 58, 237, 0.45);
+      --accent-border: #7c3aed;
     }
     html[data-accent="slate"] {
       --accent-primary: #2563eb;
       --accent-hover: #1d4ed8;
       --accent-soft: rgba(37, 99, 235, 0.14);
-      --accent-border: rgba(37, 99, 235, 0.45);
+      --accent-border: #2563eb;
     }
 
     html[data-density="compact"] {
@@ -117,22 +117,37 @@
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       background-color: var(--bg-app);
       color: var(--text-primary);
+      overflow-x: hidden;
       transition: background-color 0.15s ease, color 0.15s ease;
     }
 
-    /* Accent Dynamic Classes */
-    .btn-accent {
+    /* Consistent Brand Accent Application Across Buttons, Active Cards, Stepper & Badges */
+    .btn-accent,
+    .bg-\[\#0070ba\],
+    .bg-blue-600 {
       background-color: var(--accent-primary) !important;
       color: #ffffff !important;
     }
-    .btn-accent:hover:not(:disabled) {
-      background-color: var(--accent-hover) !important;
-    }
-    .bg-\[\#0070ba\] {
-      background-color: var(--accent-primary) !important;
-    }
+    .btn-accent:hover:not(:disabled),
     .hover\:bg-\[\#005ea6\]:hover {
       background-color: var(--accent-hover) !important;
+    }
+    .border-blue-600,
+    .border-blue-500 {
+      border-color: var(--accent-border) !important;
+    }
+    .text-blue-600,
+    .text-blue-700 {
+      color: var(--accent-primary) !important;
+    }
+    html[data-theme="dark"] .text-blue-600,
+    html[data-theme="dark"] .text-blue-700,
+    html[data-theme="dark"] .text-blue-800 {
+      color: #93c5fd !important;
+    }
+    .accent-selected-card {
+      border: 2px solid var(--accent-border) !important;
+      background-color: var(--accent-soft) !important;
     }
 
     /* Compact Layout Density Overrides */
@@ -146,24 +161,26 @@
       margin-top: 1rem !important;
     }
 
-    /* Sidebar Collapse Architecture */
+    /* Single Primary Left Sidebar Architecture (Desktop Collapse + Mobile Drawer) */
     #app-sidebar {
-      width: 240px;
-      transition: width 0.2s ease;
+      width: 248px;
+      transition: width 0.2s ease, transform 0.2s ease;
     }
-    html[data-sidebar="collapsed"] #app-sidebar {
-      width: 68px;
-    }
-    html[data-sidebar="collapsed"] .sidebar-label {
-      display: none !important;
-    }
-    html[data-sidebar="collapsed"] .sidebar-nav-btn {
-      justify-content: center;
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
+    @media (min-width: 768px) {
+      html[data-sidebar="collapsed"] #app-sidebar {
+        width: 72px;
+      }
+      html[data-sidebar="collapsed"] .sidebar-label {
+        display: none !important;
+      }
+      html[data-sidebar="collapsed"] .sidebar-nav-btn {
+        justify-content: center;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
     }
 
-    /* Complete Dark Mode Surface, Text, Border, Input, Badge & Table Compatibility */
+    /* Complete Dark Mode Surface, Text, Border, Input, Option, Button, Badge & Table Compatibility */
     html[data-theme="dark"] .bg-white,
     html[data-theme="dark"] .bg-white\/95 {
       background-color: var(--bg-surface) !important;
@@ -174,8 +191,15 @@
     html[data-theme="dark"] .bg-slate-50\/60 {
       background-color: var(--bg-muted) !important;
     }
-    html[data-theme="dark"] .bg-slate-100 {
+    html[data-theme="dark"] .bg-slate-100,
+    html[data-theme="dark"] .bg-slate-200 {
       background-color: var(--bg-elevated) !important;
+      color: var(--text-primary) !important;
+    }
+    html[data-theme="dark"] .bg-slate-900:not(.btn-accent):not(#toast-banner):not(pre):not(.code-console) {
+      background-color: #1e293b !important;
+      border: 1px solid #475569 !important;
+      color: #f8fafc !important;
     }
     html[data-theme="dark"] .text-slate-900,
     html[data-theme="dark"] .text-slate-800 {
@@ -204,6 +228,10 @@
       color: #f8fafc !important;
       border-color: #334155 !important;
     }
+    html[data-theme="dark"] select option {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+    }
     html[data-theme="dark"] input::placeholder,
     html[data-theme="dark"] textarea::placeholder {
       color: #64748b !important;
@@ -211,7 +239,7 @@
     html[data-theme="dark"] input:focus,
     html[data-theme="dark"] select:focus,
     html[data-theme="dark"] textarea:focus {
-      border-color: var(--accent-primary) !important;
+      border-color: var(--accent-border) !important;
       box-shadow: 0 0 0 2px var(--accent-soft) !important;
     }
 
@@ -220,7 +248,7 @@
     html[data-theme="dark"] .bg-blue-50\/70,
     html[data-theme="dark"] .bg-blue-50\/40,
     html[data-theme="dark"] .bg-blue-50\/30 {
-      background-color: rgba(30, 58, 138, 0.28) !important;
+      background-color: var(--accent-soft) !important;
     }
     html[data-theme="dark"] .from-blue-50\/80 {
       --tw-gradient-from: rgba(30, 58, 138, 0.3) !important;
@@ -232,37 +260,45 @@
     html[data-theme="dark"] .bg-amber-50,
     html[data-theme="dark"] .bg-amber-50\/50,
     html[data-theme="dark"] .bg-amber-50\/40 {
-      background-color: rgba(120, 53, 15, 0.25) !important;
+      background-color: rgba(120, 53, 15, 0.28) !important;
     }
     html[data-theme="dark"] .bg-emerald-50,
     html[data-theme="dark"] .bg-emerald-50\/60,
     html[data-theme="dark"] .bg-emerald-50\/50 {
-      background-color: rgba(6, 78, 59, 0.25) !important;
+      background-color: rgba(6, 78, 59, 0.28) !important;
     }
-    html[data-theme="dark"] .bg-rose-50 {
+    html[data-theme="dark"] .bg-rose-50,
+    html[data-theme="dark"] .bg-rose-50\/40 {
       background-color: rgba(136, 19, 55, 0.28) !important;
     }
     html[data-theme="dark"] .text-amber-900,
     html[data-theme="dark"] .text-amber-950,
-    html[data-theme="dark"] .text-amber-800 {
+    html[data-theme="dark"] .text-amber-800,
+    html[data-theme="dark"] .text-amber-700 {
       color: #fde68a !important;
     }
+    html[data-theme="dark"] .text-emerald-900,
     html[data-theme="dark"] .text-emerald-800,
     html[data-theme="dark"] .text-emerald-700 {
       color: #6ee7b7 !important;
     }
-    html[data-theme="dark"] .text-blue-700,
-    html[data-theme="dark"] .text-blue-800 {
-      color: #93c5fd !important;
+    html[data-theme="dark"] .text-rose-900,
+    html[data-theme="dark"] .text-rose-800 {
+      color: #fecdd3 !important;
     }
     html[data-theme="dark"] .bg-amber-100,
     html[data-theme="dark"] .bg-amber-200 {
-      background-color: rgba(180, 83, 9, 0.35) !important;
+      background-color: rgba(180, 83, 9, 0.4) !important;
       color: #fde68a !important;
     }
-    html[data-theme="dark"] .bg-emerald-100 {
-      background-color: rgba(4, 120, 87, 0.35) !important;
+    html[data-theme="dark"] .bg-emerald-100,
+    html[data-theme="dark"] .bg-emerald-200 {
+      background-color: rgba(4, 120, 87, 0.4) !important;
       color: #6ee7b7 !important;
+    }
+    html[data-theme="dark"] .bg-rose-200 {
+      background-color: rgba(190, 18, 60, 0.4) !important;
+      color: #fecdd3 !important;
     }
     html[data-theme="dark"] .bg-blue-100 {
       background-color: rgba(29, 78, 216, 0.35) !important;
@@ -280,7 +316,10 @@
       --ag-border-color: var(--border-subtle);
       --ag-header-background-color: var(--bg-elevated);
       --ag-background-color: var(--bg-surface);
+      --ag-odd-row-background-color: var(--bg-surface);
       --ag-foreground-color: var(--text-primary);
+      --ag-data-color: var(--text-primary);
+      --ag-secondary-foreground-color: var(--text-secondary);
       --ag-header-foreground-color: var(--text-secondary);
       --ag-row-hover-color: var(--accent-soft);
     }
@@ -322,67 +361,48 @@
 </head>
 <body class="min-h-full bg-slate-50 text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
 
-  <!-- Top SaaS Header Bar -->
+  <!-- Top SaaS Header Bar (Streamlined: Sidebar Toggle, Logo/App Name, Workspace Name, Theme Toggle, Notification Button, PayPal Status Badge) -->
   <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-    <div class="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-      <div class="flex items-center gap-3">
-        <!-- Sidebar Collapse Toggle Button -->
-        <button id="btn-sidebar-toggle" onclick="toggleSidebarCollapsed()" title="Toggle Sidebar Navigation" class="hidden md:flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 transition">
+    <div class="mx-auto flex max-w-[1440px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <!-- Left: Hamburger Sidebar Toggle + Proof-to-Pay Logo & App Name + Workspace Name -->
+      <div class="flex min-w-0 items-center gap-3">
+        <button id="btn-sidebar-toggle" onclick="handleHeaderSidebarToggle()" title="Toggle Navigation Sidebar" aria-label="Toggle Navigation Sidebar" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 transition">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
           </svg>
         </button>
 
-        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#003087] text-white shadow-sm">
+        <div class="btn-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#003087] text-white shadow-sm">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
-        <div>
-          <div class="flex items-center gap-2">
+
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
             <span class="text-base font-bold tracking-tight text-slate-900">Proof-to-Pay</span>
-            <span id="header-workspace-name-pill" class="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-600/20">
-              Rivera Freelance Studio
+            <span id="header-workspace-name-pill" class="truncate rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-600/20">
+              Rivera Freelance Studio (Demo)
             </span>
           </div>
-          <p class="hidden sm:block text-xs text-slate-500">Turn messy client messages into clear scopes &amp; verified PayPal invoices</p>
+          <p class="hidden sm:block truncate text-xs text-slate-500">Turn messy client messages into clear scopes &amp; verified PayPal invoices</p>
         </div>
       </div>
 
-      <!-- Top Navigation Bar (Responsive & Synced with Sidebar) -->
-      <nav class="flex flex-wrap items-center gap-1" aria-label="Main Navigation">
-        <button id="nav-dashboard" onclick="switchNav('dashboard')" class="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition">
-          Dashboard
-        </button>
-        <button id="nav-projects" onclick="switchNav('projects')" class="rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
-          Projects
-        </button>
-        <button id="nav-invoices" onclick="switchNav('invoices')" class="rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
-          Invoices
-        </button>
-        <button id="nav-assistant" onclick="switchNav('assistant')" class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
-          <span>AI Assistant</span>
-          <span id="nav-approval-badge" class="hidden rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-bold text-white">1</span>
-        </button>
-        <button id="nav-settings" onclick="switchNav('settings')" class="rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
-          Settings
-        </button>
-      </nav>
-
-      <!-- Header Right Controls: Quick Theme Toggle, Notification Center & Unified PayPal Status Pill -->
-      <div class="flex items-center gap-2">
+      <!-- Right: Theme Toggle Button, Notification Button, and Unified PayPal Connection Status Badge -->
+      <div class="flex shrink-0 items-center gap-2">
         <button id="btn-header-theme-cycle" onclick="cycleThemeQuick()" title="Switch Light / Dark / System Theme" class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-100 transition">
           <span id="header-theme-icon">☀️</span>
         </button>
 
         <div class="relative">
-          <button id="btn-header-notifications" onclick="toggleNotificationsDropdown()" title="Workspace Notifications" class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-100 transition">
+          <button id="btn-header-notifications" onclick="toggleNotificationsDropdown()" title="In-App UI Notifications" class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-100 transition">
             <span>🔔</span>
             <span id="header-notif-count" class="hidden absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white">0</span>
           </button>
-          <div id="header-notif-dropdown" class="hidden absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl z-50">
+          <div id="header-notif-dropdown" class="hidden absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl z-50">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-              <span class="text-xs font-bold text-slate-900">Notifications</span>
+              <span class="text-xs font-bold text-slate-900">In-App UI Notifications</span>
               <button onclick="clearNotificationFeed()" class="text-[11px] font-medium text-blue-600 hover:underline">Clear all</button>
             </div>
             <div id="header-notif-list" class="mt-2 max-h-60 space-y-2 overflow-y-auto text-xs text-slate-600">
@@ -391,50 +411,66 @@
           </div>
         </div>
 
-        <!-- Unified PayPal Environment & Connection Status Pill (Single Source of Truth with Settings) -->
-        <button id="header-connection-pill" onclick="switchNav('settings')" class="flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:opacity-90 transition">
-          <span id="header-connection-dot" class="h-2 w-2 rounded-full bg-amber-500"></span>
-          <span id="header-connection-text">Checking PayPal Status...</span>
+        <!-- Unified PayPal Environment & Connection Status Badge (Single Source of Truth with Settings) -->
+        <button id="header-connection-pill" onclick="switchNav('settings')" class="flex max-w-[220px] sm:max-w-none items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:opacity-90 transition">
+          <span id="header-connection-dot" class="h-2 w-2 shrink-0 rounded-full bg-amber-500"></span>
+          <span id="header-connection-text" class="truncate">Checking PayPal Status...</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- Main SaaS Shell (Collapsible Left Sidebar + Workspace Content) -->
-  <div class="mx-auto flex max-w-[1440px]">
+  <!-- Mobile Sidebar Drawer Backdrop -->
+  <div id="mobile-sidebar-backdrop" onclick="closeMobileSidebar()" class="fixed inset-0 z-30 hidden bg-slate-950/60 backdrop-blur-xs md:hidden"></div>
 
-    <!-- Collapsible SaaS Sidebar -->
-    <aside id="app-sidebar" class="hidden md:flex shrink-0 flex-col justify-between border-r border-slate-200 bg-white p-3 min-h-[calc(100vh-61px)]">
-      <div class="space-y-1">
-        <div class="px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 sidebar-label">
-          Workspace
+  <!-- Main SaaS Shell (Single Primary Left Sidebar Navigation + Workspace Content) -->
+  <div class="mx-auto flex max-w-[1440px] relative">
+
+    <!-- Single Primary Navigation System: Left Sidebar (Collapsible on Desktop + Slide-Over Drawer on Mobile) -->
+    <aside id="app-sidebar" aria-label="Main Navigation" class="fixed inset-y-0 left-0 z-40 flex -translate-x-full flex-col justify-between border-r border-slate-200 bg-white p-3 shadow-xl md:sticky md:top-[61px] md:z-20 md:h-[calc(100vh-61px)] md:translate-x-0 md:shadow-none">
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between px-2.5 py-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 sidebar-label">Navigation</span>
+          <button onclick="closeMobileSidebar()" class="text-xs text-slate-400 hover:text-slate-600 md:hidden" aria-label="Close Navigation Drawer">✕</button>
         </div>
-        <button id="side-nav-dashboard" onclick="switchNav('dashboard')" class="sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
-          <span class="text-sm">📊</span>
-          <span class="sidebar-label">Dashboard</span>
+
+        <button id="nav-dashboard" onclick="switchNav('dashboard')" class="sidebar-nav-btn btn-accent flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-white transition">
+          <span class="text-sm shrink-0">📊</span>
+          <span class="sidebar-label truncate">Dashboard</span>
         </button>
-        <button id="side-nav-projects" onclick="switchNav('projects')" class="sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
-          <span class="text-sm">📋</span>
-          <span class="sidebar-label">Projects &amp; Scopes</span>
+
+        <button id="nav-projects" onclick="switchNav('projects')" class="sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+          <span class="text-sm shrink-0">📋</span>
+          <span class="sidebar-label truncate">Projects &amp; Scopes</span>
         </button>
-        <button id="side-nav-invoices" onclick="switchNav('invoices')" class="sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
-          <span class="text-sm">💳</span>
-          <span class="sidebar-label">PayPal Invoices</span>
+
+        <button id="nav-invoices" onclick="switchNav('invoices')" class="sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+          <span class="text-sm shrink-0">💳</span>
+          <span class="sidebar-label truncate">PayPal Invoices</span>
         </button>
-        <button id="side-nav-assistant" onclick="switchNav('assistant')" class="sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
-          <span class="text-sm">🤖</span>
-          <span class="sidebar-label">AI Assistant</span>
+
+        <button id="nav-assistant" onclick="switchNav('assistant')" class="sidebar-nav-btn flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+          <span class="flex items-center gap-3 min-w-0">
+            <span class="text-sm shrink-0">🤖</span>
+            <span class="sidebar-label truncate">AI Assistant</span>
+          </span>
+          <span id="nav-approval-badge" class="hidden shrink-0 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">1</span>
         </button>
-        <button id="side-nav-settings" onclick="switchNav('settings')" class="sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
-          <span class="text-sm">⚙️</span>
-          <span class="sidebar-label">Settings</span>
+
+        <button id="nav-settings" onclick="switchNav('settings')" class="sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+          <span class="text-sm shrink-0">⚙️</span>
+          <span class="sidebar-label truncate">Settings</span>
         </button>
       </div>
 
+      <!-- Workspace Profile Section at Bottom of Sidebar -->
       <div class="mt-6 border-t border-slate-200 pt-3">
         <div class="rounded-xl bg-slate-50 p-3 text-xs sidebar-label">
-          <div class="font-bold text-slate-800" id="sidebar-freelancer-name">Alex Rivera</div>
-          <div class="mt-0.5 truncate text-[11px] text-slate-500" id="sidebar-invoicer-email">alex@riverastudio.dev</div>
+          <div class="flex items-center justify-between gap-1">
+            <div class="font-bold text-slate-800 truncate" id="sidebar-freelancer-name">Alex Rivera (Demo)</div>
+            <span id="sidebar-demo-identity-badge" class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-amber-800">DEMO</span>
+          </div>
+          <div class="mt-0.5 truncate text-[11px] text-slate-500" id="sidebar-invoicer-email">demo-invoicer@sandbox.example.com</div>
           <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500">
             <span>Default Currency:</span>
             <strong id="sidebar-default-currency" class="font-mono text-slate-800">USD</strong>
@@ -451,7 +487,7 @@
       <!-- ================================================================== -->
       <section id="view-dashboard" class="space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div>
+          <div class="min-w-0">
             <h1 id="dash-welcome-heading" class="text-xl font-bold text-slate-900">Welcome back, Alex</h1>
             <p class="mt-1 text-sm text-slate-600">
               Manage your client scopes, protect your projects against scope creep, and track verified PayPal invoices.
@@ -495,7 +531,7 @@
         <div class="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50/80 via-white to-indigo-50/60 p-5 shadow-sm">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2.5">
-              <span class="btn-accent flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold text-white">AI</span>
+              <span class="btn-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold text-white">AI</span>
               <div>
                 <h2 class="text-sm font-bold text-slate-900">Ask Your AI Business Assistant</h2>
                 <p class="text-xs text-slate-600">Executes real backend tools (<code class="font-mono text-[11px]">/api/agent/chat</code>) to analyze briefs, calculate extra charges, lock scopes, and prepare PayPal invoices.</p>
@@ -557,14 +593,14 @@
       <section id="view-projects" class="hidden space-y-6">
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex min-w-0 flex-wrap items-center gap-3">
               <label for="project-select-dropdown" class="text-xs font-semibold uppercase tracking-wider text-slate-500">Project:</label>
-              <select id="project-select-dropdown" onchange="handleSelectActiveProject(this.value)" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"></select>
+              <select id="project-select-dropdown" onchange="handleSelectActiveProject(this.value)" class="max-w-full rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"></select>
               <span id="project-status-badge" class="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold text-amber-800">
                 Draft Scope
               </span>
               <span id="project-data-origin-badge" class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
-                Demo Seed
+                Demo Sample
               </span>
             </div>
             <div class="flex items-center gap-2">
@@ -576,7 +612,7 @@
 
           <!-- 5-Step Horizontal Stepper -->
           <div class="grid grid-cols-1 gap-2 sm:grid-cols-5">
-            <button id="step-tab-1" onclick="openProjectStep(1)" class="flex items-center gap-2.5 rounded-xl border border-blue-600 bg-blue-50/70 p-3 text-left transition">
+            <button id="step-tab-1" onclick="openProjectStep(1)" class="accent-selected-card flex items-center gap-2.5 rounded-xl border p-3 text-left transition">
               <span class="btn-accent flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">1</span>
               <div class="min-w-0">
                 <div class="truncate text-xs font-bold text-slate-900">Create Project</div>
@@ -627,7 +663,7 @@
               </div>
               <div>
                 <label for="preset-brief-selector" class="mb-1 block text-[11px] font-semibold text-slate-500">Try a Sample Client Message</label>
-                <select id="preset-brief-selector" onchange="loadPresetIntoForm(this.value)" class="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800">
+                <select id="preset-brief-selector" onchange="loadPresetIntoForm(this.value)" class="max-w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800">
                   <option value="demo-startup-landing">WhatsApp: Startup Landing Page ($450 + Copywriting?)</option>
                   <option value="demo-saas-ui-kit">Slack: SaaS Brand &amp; Figma UI Kit ($850)</option>
                   <option value="demo-shopify-redesign">Email: Mobile Product Page Redesign ($1,200)</option>
@@ -638,7 +674,7 @@
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
                 <label for="form-client-name" class="mb-1 block text-xs font-semibold text-slate-700">Client Name</label>
-                <input id="form-client-name" type="text" value="Jordan Vance (NovaPulse Startup)" placeholder="e.g. Jordan Vance" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none" />
+                <input id="form-client-name" type="text" value="Jordan Vance (NovaPulse Startup — Demo)" placeholder="e.g. Jordan Vance" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none" />
               </div>
               <div>
                 <label for="form-client-email" class="mb-1 block text-xs font-semibold text-slate-700">Client Email (for PayPal Invoice)</label>
@@ -842,7 +878,7 @@
                   Locking generates a SHA-256 cryptographic scope fingerprint and confirms that you have reviewed all deliverables, exclusions, and pricing.
                 </p>
               </div>
-              <div class="flex items-center gap-2.5">
+              <div class="flex flex-wrap items-center gap-2.5">
                 <button id="btn-lock-scope" onclick="openLockScopeModal()" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-500 transition">
                   Approve &amp; Lock Final Scope
                 </button>
@@ -886,7 +922,7 @@
               <div class="rounded-xl border border-slate-200 p-4">
                 <div class="text-sm font-bold text-slate-900">2. Review &amp; Send to Client</div>
                 <p class="mt-1 text-xs text-slate-500">
-                  Requires your explicit confirmation before emailing the invoice to your client.
+                  Requires your explicit confirmation before emailing the invoice to your client via PayPal.
                 </p>
                 <button id="btn-send-invoice" onclick="openConfirmSendInvoiceModal()" class="mt-3 w-full rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition">
                   Review &amp; Confirm Sending Invoice
@@ -907,7 +943,7 @@
                   Payment is only marked PAID after verification through an authentic PayPal API response (<code class="font-mono">POST /api/projects/:id/paypal/sync</code>) or a cryptographically verified PayPal webhook (<code class="font-mono">POST /api/webhooks/paypal</code>).
                 </p>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <button id="btn-refresh-payment-status" onclick="handleCheckInvoiceStatusAction()" class="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
                   Check Payment Status
                 </button>
@@ -929,7 +965,7 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 class="text-lg font-bold text-slate-900">Invoices</h1>
+              <h1 class="text-lg font-bold text-slate-900">PayPal Invoices</h1>
               <p class="text-xs text-slate-500">
                 Track all project scopes, draft invoices, sent payment requests, and verified payments in one place.
               </p>
@@ -993,7 +1029,7 @@
             <div id="assistant-pending-approval-box" class="mb-3 hidden rounded-xl border border-amber-300 bg-amber-50 p-4"></div>
 
             <div class="flex gap-2">
-              <input id="assistant-chat-input" type="text" onkeydown="if(event.key==='Enter') sendAssistantInput()" placeholder="Ask e.g. 'What is missing from this brief?' or 'Generate an invoice for this approved project'..." class="flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none" />
+              <input id="assistant-chat-input" type="text" onkeydown="if(event.key==='Enter') sendAssistantInput()" placeholder="Ask e.g. 'What is missing from this brief?' or 'Generate an invoice for this approved project'..." class="min-w-0 flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-none" />
               <button id="btn-assistant-send" onclick="sendAssistantInput()" class="btn-accent rounded-xl bg-[#0070ba] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#005ea6] transition">
                 Send
               </button>
@@ -1021,7 +1057,7 @@
           <div>
             <h1 class="text-xl font-bold text-slate-900">Workspace &amp; Platform Settings</h1>
             <p class="mt-1 text-xs text-slate-500">
-              Customize your appearance, freelancer business preferences, PayPal Sandbox integration, notifications, and workspace security.
+              Customize your appearance, freelancer business preferences, PayPal Sandbox integration, in-app notifications, and workspace data controls.
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-1.5 text-xs">
@@ -1049,8 +1085,8 @@
               <!-- 1, 2, 3: Theme Selector (Light / Dark / System Default) -->
               <div>
                 <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Color Theme</label>
-                <div class="grid grid-cols-3 gap-3">
-                  <button id="theme-btn-light" type="button" onclick="setThemePreference('light')" class="flex flex-col items-center gap-1.5 rounded-xl border-2 border-blue-600 bg-blue-50/40 p-3 text-xs font-semibold text-slate-900 transition">
+                <div class="grid grid-cols-3 gap-2.5 sm:gap-3">
+                  <button id="theme-btn-light" type="button" onclick="setThemePreference('light')" class="accent-selected-card flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-bold text-slate-900 transition">
                     <span class="text-base">☀️</span>
                     <span>Light Mode</span>
                   </button>
@@ -1068,8 +1104,8 @@
               <!-- 4: Accent Color Selection -->
               <div>
                 <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Brand Accent Color</label>
-                <div class="flex flex-wrap items-center gap-2.5">
-                  <button id="accent-btn-paypal" type="button" onclick="setAccentPreference('paypal')" class="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800">
+                <div class="flex flex-wrap items-center gap-2">
+                  <button id="accent-btn-paypal" type="button" onclick="setAccentPreference('paypal')" class="accent-selected-card flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold text-slate-900">
                     <span class="h-3.5 w-3.5 rounded-full bg-[#0070ba]"></span>
                     <span>PayPal Blue</span>
                   </button>
@@ -1097,7 +1133,7 @@
                 <div>
                   <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Interface Density</label>
                   <div class="grid grid-cols-2 gap-2">
-                    <button id="density-btn-comfortable" type="button" onclick="setDensityPreference('comfortable')" class="rounded-xl border-2 border-blue-600 bg-blue-50/40 px-3 py-2 text-xs font-semibold text-slate-900 transition">
+                    <button id="density-btn-comfortable" type="button" onclick="setDensityPreference('comfortable')" class="accent-selected-card rounded-xl border px-3 py-2 text-xs font-bold text-slate-900 transition">
                       Comfortable
                     </button>
                     <button id="density-btn-compact" type="button" onclick="setDensityPreference('compact')" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
@@ -1121,7 +1157,7 @@
 
             <!-- SECTION B: WORKSPACE PREFERENCES -->
             <div id="settings-sec-workspace" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
                   <h2 class="text-base font-bold text-slate-900">B. Workspace Preferences</h2>
                   <p class="text-xs text-slate-500">
@@ -1134,15 +1170,15 @@
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label for="pref-workspace-name" class="mb-1 block text-xs font-semibold text-slate-700">Workspace Name</label>
-                  <input id="pref-workspace-name" type="text" value="Rivera Freelance Studio" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
+                  <input id="pref-workspace-name" type="text" value="Rivera Freelance Studio (Demo)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
                 </div>
                 <div>
                   <label for="pref-freelancer-name" class="mb-1 block text-xs font-semibold text-slate-700">Freelancer / Business Name</label>
-                  <input id="pref-freelancer-name" type="text" value="Alex Rivera" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
+                  <input id="pref-freelancer-name" type="text" value="Alex Rivera (Demo)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
                 </div>
                 <div>
                   <label for="pref-invoicer-email" class="mb-1 block text-xs font-semibold text-slate-700">Invoicer Email</label>
-                  <input id="pref-invoicer-email" type="email" value="alex@riverastudio.dev" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
+                  <input id="pref-invoicer-email" type="email" value="demo-invoicer@sandbox.example.com" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
                 </div>
                 <div>
                   <label for="pref-default-currency" class="mb-1 block text-xs font-semibold text-slate-700">Default Currency</label>
@@ -1205,9 +1241,14 @@
             <div id="settings-sec-paypal" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
               <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
                 <div>
-                  <h2 class="text-base font-bold text-slate-900">C. PayPal Integration</h2>
-                  <p class="text-xs text-slate-500">
-                    Synchronized with the application header from a single backend source of truth. Credentials stay strictly server-side.
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-base font-bold text-slate-900">C. PayPal Integration</h2>
+                    <span id="settings-paypal-unified-pill" class="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">
+                      Checking PayPal Status...
+                    </span>
+                  </div>
+                  <p class="mt-0.5 text-xs text-slate-500">
+                    Synchronized with the application header and <code class="font-mono">GET /api/health</code>. Credentials alone never count as connected until OAuth 2.0 + API connectivity succeeds.
                   </p>
                 </div>
                 <button id="btn-test-paypal-connection" type="button" onclick="runPayPalConnectionTest({ silent: false })" class="btn-accent flex items-center gap-2 rounded-xl bg-[#0070ba] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#005ea6] transition">
@@ -1234,7 +1275,7 @@
                     <span id="mode-badge-sandbox" class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">CHECKING</span>
                   </div>
                   <p class="mt-1.5 text-[11px] text-slate-600">
-                    Connects to <code class="font-mono">api-m.sandbox.paypal.com</code> via OAuth 2.0 to create, send, and verify Sandbox invoices.
+                    Connects to <code class="font-mono break-all">api-m.sandbox.paypal.com</code> via OAuth 2.0 to create, send, and verify Sandbox invoices.
                   </p>
                 </div>
 
@@ -1251,27 +1292,27 @@
 
               <!-- Detailed PayPal Telemetry Grid (API & Webhook Shown Separately) -->
               <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
-                <div>
+                <div class="min-w-0">
                   <div class="text-[11px] font-medium text-slate-500">Configured Environment</div>
-                  <div id="pp-status-environment" class="mt-0.5 font-bold text-slate-900">SANDBOX</div>
+                  <div id="pp-status-environment" class="mt-0.5 break-all font-bold text-slate-900">SANDBOX</div>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <div class="text-[11px] font-medium text-slate-500">API Connection Status</div>
                   <div id="pp-status-api" class="mt-0.5 font-bold text-amber-700">Checking...</div>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <div class="text-[11px] font-medium text-slate-500">Webhook Verification Status</div>
                   <div id="pp-status-webhook" class="mt-0.5 font-bold text-slate-800">Checking...</div>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <div class="text-[11px] font-medium text-slate-500">Invoicer Account Email</div>
-                  <div id="pp-status-email" class="mt-0.5 font-mono text-slate-800">alex@riverastudio.dev</div>
+                  <div id="pp-status-email" class="mt-0.5 break-all font-mono text-slate-800">demo-invoicer@sandbox.example.com</div>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <div class="text-[11px] font-medium text-slate-500">Last Successful Connection Check</div>
                   <div id="pp-status-last-check" class="mt-0.5 text-slate-700">Never verified in this session</div>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <div class="text-[11px] font-medium text-slate-500">Server Credential Footprint</div>
                   <div id="pp-status-credentials" class="mt-0.5 font-mono text-slate-700">Server-side only (Hidden)</div>
                 </div>
@@ -1280,69 +1321,73 @@
               <!-- Diagnostic / Error Banner when Connection Test Fails or Credentials Need Attention -->
               <div id="paypal-connection-alert" class="hidden rounded-xl border border-rose-300 bg-rose-50 p-3.5 text-xs text-rose-900">
                 <div class="font-bold" id="paypal-alert-title">Connection Diagnostic</div>
-                <div class="mt-1 leading-relaxed" id="paypal-alert-body"></div>
+                <div class="mt-1 break-words leading-relaxed" id="paypal-alert-body"></div>
               </div>
             </div>
 
-            <!-- SECTION D: NOTIFICATIONS -->
+            <!-- SECTION D: NOTIFICATIONS (LOCAL UI ALERTS vs EXTERNAL PAYPAL EMAILS) -->
             <div id="settings-sec-notifications" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
-                  <h2 class="text-base font-bold text-slate-900">D. Notifications</h2>
+                  <h2 class="text-base font-bold text-slate-900">D. In-App UI Notifications</h2>
                   <p class="text-xs text-slate-500">
-                    Controls real-time toast alerts and the header notification feed for each billing lifecycle event.
+                    Controls local browser toast banners and the header notification bell feed.
                   </p>
                 </div>
                 <button type="button" onclick="triggerTestNotification()" class="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100">
-                  Send Test Alert
+                  Send Local Test Alert
                 </button>
               </div>
 
+              <div class="rounded-xl border border-blue-200 bg-blue-50/50 p-3 text-[11px] leading-relaxed text-slate-700">
+                <strong>Local UI vs. External Email Notice:</strong> These toggles control <strong>in-app browser alerts only</strong>. External client emails are dispatched exclusively by PayPal when you explicitly approve sending an invoice or a manual payment reminder. Payment reminders are human-triggered (no background auto-scheduler).
+              </div>
+
               <div class="space-y-3 text-xs">
-                <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
+                <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
                   <div>
-                    <div class="font-bold text-slate-900">Invoice Created</div>
-                    <div class="text-[11px] text-slate-500">Notify when a draft or sent PayPal invoice is created</div>
+                    <div class="font-bold text-slate-900">Invoice Created &amp; Sent (In-App Alert)</div>
+                    <div class="text-[11px] text-slate-500">Local UI toast when a draft or sent invoice is created</div>
                   </div>
                   <button id="notif-toggle-invoiceCreated" type="button" role="switch" aria-checked="true" onclick="toggleNotificationSetting('invoiceCreated')" class="p2p-toggle">
                     <span class="p2p-toggle-thumb"></span>
                   </button>
                 </div>
 
-                <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
+                <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
                   <div>
-                    <div class="font-bold text-slate-900">Invoice Paid (Authentic Verification)</div>
-                    <div class="text-[11px] text-slate-500">Notify when PayPal confirms canonical PAID status</div>
+                    <div class="font-bold text-slate-900">Invoice Paid — Authentic Verification (In-App Alert)</div>
+                    <div class="text-[11px] text-slate-500">Local UI toast when PayPal confirms canonical PAID status</div>
                   </div>
                   <button id="notif-toggle-invoicePaid" type="button" role="switch" aria-checked="true" onclick="toggleNotificationSetting('invoicePaid')" class="p2p-toggle">
                     <span class="p2p-toggle-thumb"></span>
                   </button>
                 </div>
 
-                <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
+                <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
                   <div>
-                    <div class="font-bold text-slate-900">Payment Verification Failure</div>
-                    <div class="text-[11px] text-slate-500">Notify if simulated or unverified payment attempts are blocked</div>
+                    <div class="font-bold text-slate-900">Payment Verification Failure (In-App Alert)</div>
+                    <div class="text-[11px] text-slate-500">Local UI toast if simulated or unverified payment attempts are blocked</div>
                   </div>
                   <button id="notif-toggle-paymentVerificationFailure" type="button" role="switch" aria-checked="true" onclick="toggleNotificationSetting('paymentVerificationFailure')" class="p2p-toggle">
                     <span class="p2p-toggle-thumb"></span>
                   </button>
                 </div>
 
-                <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
+                <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
                   <div>
-                    <div class="font-bold text-slate-900">Webhook Signature Failure</div>
-                    <div class="text-[11px] text-slate-500">Notify when an incoming webhook fails RSA signature verification</div>
+                    <div class="font-bold text-slate-900">Webhook Signature Failure (In-App Alert)</div>
+                    <div class="text-[11px] text-slate-500">Local UI toast when an incoming webhook fails RSA signature verification</div>
                   </div>
                   <button id="notif-toggle-webhookFailure" type="button" role="switch" aria-checked="true" onclick="toggleNotificationSetting('webhookFailure')" class="p2p-toggle">
                     <span class="p2p-toggle-thumb"></span>
                   </button>
                 </div>
 
-                <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
+                <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5">
                   <div>
-                    <div class="font-bold text-slate-900">Pending Invoice Reminders</div>
-                    <div class="text-[11px] text-slate-500">Notify when payment reminders are drafted or dispatched</div>
+                    <div class="font-bold text-slate-900">Manual Payment Reminder Actions (In-App Alert)</div>
+                    <div class="text-[11px] text-slate-500">Local UI toast when you manually draft or approve a payment reminder</div>
                   </div>
                   <button id="notif-toggle-pendingInvoiceReminders" type="button" role="switch" aria-checked="true" onclick="toggleNotificationSetting('pendingInvoiceReminders')" class="p2p-toggle">
                     <span class="p2p-toggle-thumb"></span>
@@ -1360,7 +1405,7 @@
             <div>
               <h2 class="text-base font-bold text-slate-900">E. Security &amp; Data Management</h2>
               <p class="text-xs text-slate-500">
-                Inspect immutable audit logs, export sanitized workspace records, manage backups, and safely clear demo data without touching real client projects.
+                Inspect immutable audit logs, lock the workspace screen on inactivity, export sanitized workspace records, and safely clear demo data without touching real client projects.
               </p>
             </div>
             <div class="flex items-center gap-2 text-xs">
@@ -1371,20 +1416,25 @@
           </div>
 
           <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <!-- 1. Audit Logs & Session Timeout -->
+            <!-- 1. Audit Logs & Genuine Inactivity Screen Lock -->
             <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-              <div class="text-xs font-bold text-slate-900">Audit Trail &amp; Session Security</div>
+              <div class="text-xs font-bold text-slate-900">Workspace Inactivity Screen Lock &amp; Audit Log</div>
               <p class="text-[11px] text-slate-600">
-                Every scope lock, human approval, invoice creation, and webhook check is recorded in the audit log.
+                Locks the local UI screen and blocks mutating actions after inactivity to prevent unintended clicks. (Local UI screen lock; server API key auth is configured separately via <code class="font-mono">FREELANCER_API_KEY</code> in <code class="font-mono">.env</code>.)
               </p>
-              <div>
-                <label for="pref-session-timeout" class="mb-1 block text-[11px] font-semibold text-slate-700">Idle Session Lock Timeout</label>
-                <select id="pref-session-timeout" onchange="saveBackendSettings('security')" class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900">
-                  <option value="15">15 Minutes</option>
-                  <option value="30" selected>30 Minutes</option>
-                  <option value="60">60 Minutes</option>
-                  <option value="0">Never (Disabled)</option>
-                </select>
+              <div class="flex items-end gap-2">
+                <div class="flex-1">
+                  <label for="pref-session-timeout" class="mb-1 block text-[11px] font-semibold text-slate-700">Inactivity Lock Timer</label>
+                  <select id="pref-session-timeout" onchange="saveBackendSettings('security')" class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900">
+                    <option value="15">15 Minutes</option>
+                    <option value="30" selected>30 Minutes</option>
+                    <option value="60">60 Minutes</option>
+                    <option value="0">Never (Disabled)</option>
+                  </select>
+                </div>
+                <button id="btn-lock-workspace-now" type="button" onclick="lockWorkspaceScreen('Manual lock triggered by freelancer.')" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition">
+                  Lock Now
+                </button>
               </div>
               <button id="btn-open-audit-modal" type="button" onclick="openAuditLogsModal()" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 transition">
                 View Full Workspace Audit Log
@@ -1406,7 +1456,7 @@
                 </button>
               </div>
               <div class="grid grid-cols-2 gap-2 pt-1">
-                <button id="btn-create-backup" type="button" onclick="createWorkspaceBackupAction()" class="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition">
+                <button id="btn-create-backup" type="button" onclick="createWorkspaceBackupAction()" class="btn-accent rounded-xl bg-[#0070ba] px-3 py-2 text-xs font-semibold text-white hover:bg-[#005ea6] transition">
                   Create Backup
                 </button>
                 <button id="btn-restore-backup" type="button" onclick="openRestoreBackupConfirmModal()" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
@@ -1433,7 +1483,7 @@
 
         <!-- Developer / Advanced Tools Section -->
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 class="text-sm font-bold text-slate-900">Developer / Advanced Tools (Webhook &amp; Payload Inspector)</h2>
               <p class="text-xs text-slate-500">
@@ -1460,12 +1510,12 @@
                     Test Unverified Signature (Expect 401 Block)
                   </button>
                 </div>
-                <pre id="dev-webhook-test-output" class="mt-3 max-h-40 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] text-slate-200">Ready to test payment verification guards via POST /api/webhooks/paypal.</pre>
+                <pre id="dev-webhook-test-output" class="code-console mt-3 max-h-40 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] text-slate-200">Ready to test payment verification guards via POST /api/webhooks/paypal.</pre>
               </div>
 
               <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">PayPal Invoicing REST API v2 Payload</h3>
-                <pre id="dev-paypal-json-preview" class="mt-2 max-h-52 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] text-emerald-300"></pre>
+                <pre id="dev-paypal-json-preview" class="code-console mt-2 max-h-52 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] text-emerald-300"></pre>
               </div>
             </div>
           </div>
@@ -1487,7 +1537,7 @@
         <div id="modal-lock-summary" class="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1 text-slate-800"></div>
         <div>
           <label for="input-approver-signature" class="mb-1 block font-semibold text-slate-700">Your Name (Freelancer Approval)</label>
-          <input id="input-approver-signature" type="text" value="Alex Rivera" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
+          <input id="input-approver-signature" type="text" value="Alex Rivera (Demo)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-900" />
         </div>
         <label class="flex cursor-pointer items-start gap-2 pt-1">
           <input id="checkbox-confirm-lock" type="checkbox" checked class="mt-0.5 rounded border-slate-300" />
@@ -1572,8 +1622,45 @@
     </div>
   </div>
 
+  <!-- MODAL 5: GENUINE INACTIVITY WORKSPACE SCREEN LOCK & EXPLICIT UNLOCK FLOW -->
+  <div id="modal-inactivity-lock" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md">
+    <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+      <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+        <div class="btn-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0070ba] text-white">
+          🔒
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Workspace Screen Locked</h3>
+          <p id="lock-screen-workspace-label" class="text-xs text-slate-500">Rivera Freelance Studio (Demo)</p>
+        </div>
+      </div>
+
+      <div class="mt-4 space-y-3 text-xs text-slate-600">
+        <p id="lock-screen-reason">
+          This workspace was locked due to inactivity to prevent unintended edits, scope locks, or invoice dispatches.
+        </p>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600">
+          <strong>Security Note:</strong> While locked, all mutating actions and invoice dispatches are suspended. Confirm your freelancer name below to resume your session.
+        </div>
+        <div>
+          <label for="input-unlock-freelancer" class="mb-1 block font-semibold text-slate-700">Confirm Freelancer Name to Unlock</label>
+          <input id="input-unlock-freelancer" type="text" onkeydown="if(event.key==='Enter') unlockWorkspaceScreen()" placeholder="e.g. Alex Rivera" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs text-slate-900" />
+        </div>
+        <div id="lock-screen-error" class="hidden text-xs font-semibold text-rose-600">
+          Please enter your freelancer name to unlock the workspace.
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end">
+        <button id="btn-unlock-workspace" type="button" onclick="unlockWorkspaceScreen()" class="btn-accent w-full rounded-xl bg-[#0070ba] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#005ea6] transition">
+          Unlock Workspace &amp; Resume
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
-  <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm rounded-xl border border-slate-200 bg-slate-900 px-4 py-3 text-xs text-white shadow-lg">
+  <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-xs text-white shadow-lg">
     <div id="toast-title" class="font-bold">Updated</div>
     <div id="toast-body" class="mt-0.5 text-slate-300"></div>
   </div>
@@ -1585,7 +1672,7 @@
     const FREELANCER_PRESETS = {
       'demo-startup-landing': {
         id: 'demo-startup-landing',
-        clientName: 'Jordan Vance (NovaPulse Startup)',
+        clientName: 'Jordan Vance (NovaPulse Startup — Demo)',
         clientEmail: 'jordan.vance-buyer@sandbox.paypal.com',
         projectTitle: 'Startup Landing Page (3 Sections)',
         proposedBudget: 450,
@@ -1595,7 +1682,7 @@
       },
       'demo-saas-ui-kit': {
         id: 'demo-saas-ui-kit',
-        clientName: 'Marcus Chen (VectorFlow Labs)',
+        clientName: 'Marcus Chen (VectorFlow Labs — Demo)',
         clientEmail: 'marcus.chen-buyer@sandbox.paypal.com',
         projectTitle: 'VectorFlow Brand Identity & Figma UI Kit',
         proposedBudget: 850,
@@ -1605,7 +1692,7 @@
       },
       'demo-shopify-redesign': {
         id: 'demo-shopify-redesign',
-        clientName: 'Elena Rostova (Lumen Studio)',
+        clientName: 'Elena Rostova (Lumen Studio — Demo)',
         clientEmail: 'elena.rostova-buyer@sandbox.paypal.com',
         projectTitle: 'Mobile Product Page & Cart Drawer Redesign',
         proposedBudget: 1200,
@@ -1622,6 +1709,8 @@
     const state = {
       activeNav: 'dashboard',
       activeStep: 1,
+      mobileDrawerOpen: false,
+      isWorkspaceLocked: false,
       paypalStatus: {
         configured: false,
         mode: 'LOCAL_DEMO_FIXTURE_MODE',
@@ -1638,8 +1727,8 @@
         webhookConfigured: false,
         webhookVerificationStatus: 'DISABLED_IN_DEMO',
         webhookStatusLabel: 'Simulated Guard Only (Local Demo Mode)',
-        invoicerEmail: 'alex@riverastudio.dev',
-        invoicerBusinessName: 'Rivera Freelance Studio',
+        invoicerEmail: 'demo-invoicer@sandbox.example.com',
+        invoicerBusinessName: 'Rivera Freelance Studio (Demo)',
         lastCheckedAt: null,
         lastSuccessfulConnectionAt: null,
         lastError: null,
@@ -1653,9 +1742,10 @@
       },
       settings: {
         workspace: {
-          workspaceName: 'Rivera Freelance Studio',
-          freelancerName: 'Alex Rivera',
-          invoicerEmail: 'alex@riverastudio.dev',
+          workspaceName: 'Rivera Freelance Studio (Demo)',
+          freelancerName: 'Alex Rivera (Demo)',
+          invoicerEmail: 'demo-invoicer@sandbox.example.com',
+          isDemoIdentity: true,
           defaultCurrency: 'USD',
           defaultInvoiceDuePeriod: 'DUE_ON_RECEIPT',
           dateFormat: 'YYYY-MM-DD',
@@ -1734,34 +1824,31 @@
           state.uiPrefs.themeMode === 'system' ? '💻' : resolvedTheme === 'dark' ? '🌙' : '☀️';
       }
 
-      // Highlight active Theme buttons in Settings
       ['light', 'dark', 'system'].forEach((m) => {
         const btn = document.getElementById('theme-btn-' + m);
         if (!btn) return;
         if (state.uiPrefs.themeMode === m) {
-          btn.className = 'flex flex-col items-center gap-1.5 rounded-xl border-2 border-blue-600 bg-blue-50/40 p-3 text-xs font-bold text-slate-900 transition';
+          btn.className = 'accent-selected-card flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-bold text-slate-900 transition';
         } else {
           btn.className = 'flex flex-col items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition';
         }
       });
 
-      // Highlight active Accent Color button in Settings
       ['paypal', 'indigo', 'emerald', 'violet', 'slate'].forEach((acc) => {
         const btn = document.getElementById('accent-btn-' + acc);
         if (!btn) return;
         if (state.uiPrefs.accentColor === acc) {
-          btn.className = 'flex items-center gap-2 rounded-xl border-2 border-blue-600 bg-blue-50/40 px-3 py-2 text-xs font-bold text-slate-900';
+          btn.className = 'accent-selected-card flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold text-slate-900';
         } else {
           btn.className = 'flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50';
         }
       });
 
-      // Highlight active Density button in Settings
       ['comfortable', 'compact'].forEach((d) => {
         const btn = document.getElementById('density-btn-' + d);
         if (!btn) return;
         if (state.uiPrefs.density === d) {
-          btn.className = 'rounded-xl border-2 border-blue-600 bg-blue-50/40 px-3 py-2 text-xs font-bold text-slate-900 transition';
+          btn.className = 'accent-selected-card rounded-xl border px-3 py-2 text-xs font-bold text-slate-900 transition';
         } else {
           btn.className = 'rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition';
         }
@@ -1798,6 +1885,35 @@
       saveLocalUiPrefs();
       applyUiPreferencesToDom();
       notify('Layout Density Updated', 'Switched to ' + density + ' spacing.');
+    }
+
+    // Unified Sidebar Toggle (Mobile Drawer on < 768px, Collapse/Expand on Desktop >= 768px)
+    function handleHeaderSidebarToggle() {
+      if (window.innerWidth < 768) {
+        if (state.mobileDrawerOpen) {
+          closeMobileSidebar();
+        } else {
+          openMobileSidebar();
+        }
+      } else {
+        toggleSidebarCollapsed();
+      }
+    }
+
+    function openMobileSidebar() {
+      state.mobileDrawerOpen = true;
+      const sidebar = document.getElementById('app-sidebar');
+      const backdrop = document.getElementById('mobile-sidebar-backdrop');
+      if (sidebar) sidebar.classList.remove('-translate-x-full');
+      if (backdrop) backdrop.classList.remove('hidden');
+    }
+
+    function closeMobileSidebar() {
+      state.mobileDrawerOpen = false;
+      const sidebar = document.getElementById('app-sidebar');
+      const backdrop = document.getElementById('mobile-sidebar-backdrop');
+      if (sidebar) sidebar.classList.add('-translate-x-full');
+      if (backdrop) backdrop.classList.add('hidden');
     }
 
     function toggleSidebarCollapsed() {
@@ -1848,13 +1964,20 @@
     }
 
     // ----------------------------------------------------------------------
-    // Notification Engine (Respects User Notification Toggles)
+    // Notification Engine (Strictly Respects All 5 User Notification Toggles)
     // ----------------------------------------------------------------------
+    function isNotificationCategoryEnabled(category) {
+      if (!category) return true;
+      const notifPrefs = state.settings?.notifications || {};
+      if (category in notifPrefs) {
+        return Boolean(notifPrefs[category]);
+      }
+      return true;
+    }
+
     function notify(title, message, category = null) {
-      if (category && state.settings?.notifications) {
-        if (state.settings.notifications[category] === false) {
-          return; // Suppressed by user's notification toggle
-        }
+      if (!isNotificationCategoryEnabled(category)) {
+        return false;
       }
 
       state.notificationFeed.unshift({
@@ -1873,6 +1996,7 @@
       banner.classList.remove('hidden');
       clearTimeout(window._toastTimer);
       window._toastTimer = setTimeout(() => banner.classList.add('hidden'), 4500);
+      return true;
     }
 
     function renderNotificationCenter() {
@@ -1914,8 +2038,8 @@
 
     function triggerTestNotification() {
       notify(
-        'Test Notification Active',
-        'Your enabled Proof-to-Pay notification channels are working.',
+        'Local UI Test Alert',
+        'In-app toast and notification bell feed are active (external client emails are only sent by PayPal upon invoice/reminder approval).',
         null
       );
     }
@@ -1938,9 +2062,86 @@
     }
 
     // ----------------------------------------------------------------------
+    // Genuine Workspace Inactivity Lock Screen & Explicit Unlock Flow
+    // ----------------------------------------------------------------------
+    function lockWorkspaceScreen(reasonText) {
+      state.isWorkspaceLocked = true;
+      try {
+        sessionStorage.setItem('p2p_screen_locked', 'true');
+      } catch {}
+      const modal = document.getElementById('modal-inactivity-lock');
+      const wsLabel = document.getElementById('lock-screen-workspace-label');
+      const reasonEl = document.getElementById('lock-screen-reason');
+      const inputEl = document.getElementById('input-unlock-freelancer');
+      const errEl = document.getElementById('lock-screen-error');
+
+      if (wsLabel) wsLabel.textContent = state.settings?.workspace?.workspaceName || 'Rivera Freelance Studio (Demo)';
+      if (reasonEl && reasonText) reasonEl.textContent = reasonText;
+      if (inputEl) inputEl.value = state.settings?.workspace?.freelancerName || 'Alex Rivera (Demo)';
+      if (errEl) errEl.classList.add('hidden');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+    }
+
+    function unlockWorkspaceScreen() {
+      const inputEl = document.getElementById('input-unlock-freelancer');
+      const errEl = document.getElementById('lock-screen-error');
+      const val = (inputEl?.value || '').trim();
+      if (!val) {
+        if (errEl) errEl.classList.remove('hidden');
+        return false;
+      }
+      state.isWorkspaceLocked = false;
+      try {
+        sessionStorage.removeItem('p2p_screen_locked');
+      } catch {}
+      const modal = document.getElementById('modal-inactivity-lock');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+      resetIdleSessionTimer();
+      notify('Workspace Unlocked', 'Resumed session for ' + val + '.');
+      return true;
+    }
+
+    function resetIdleSessionTimer() {
+      if (state.isWorkspaceLocked) return;
+      clearTimeout(state.idleTimer);
+      const mins = Number(state.settings?.security?.sessionTimeoutMinutes || 0);
+      if (mins > 0) {
+        state.idleTimer = setTimeout(() => {
+          lockWorkspaceScreen(
+            'Workspace screen automatically locked after ' +
+              mins +
+              ' minute(s) of inactivity to prevent unattended changes.'
+          );
+        }, mins * 60 * 1000);
+      }
+    }
+    ['click', 'keydown'].forEach((evt) =>
+      window.addEventListener(
+        evt,
+        (e) => {
+          if (!state.isWorkspaceLocked && !e.target?.closest?.('#modal-inactivity-lock')) {
+            resetIdleSessionTimer();
+          }
+        },
+        { passive: true }
+      )
+    );
+
+    // ----------------------------------------------------------------------
     // 1. Backend REST API Client (`fetch()` calls to all backend endpoints)
     // ----------------------------------------------------------------------
     async function apiFetch(endpointPath, options = {}) {
+      const method = (options.method || 'GET').toUpperCase();
+      if (state.isWorkspaceLocked && method !== 'GET') {
+        throw new Error('Workspace screen is locked due to inactivity. Please unlock the screen before making changes.');
+      }
+
       const targetUrl = API_BASE + endpointPath;
       const headers = Object.assign(
         {
@@ -1950,7 +2151,7 @@
         options.headers || {}
       );
       const response = await fetch(targetUrl, {
-        method: options.method || 'GET',
+        method,
         headers,
         body: options.body ? JSON.stringify(options.body) : undefined
       });
@@ -1965,15 +2166,39 @@
     }
 
     function applyPayPalStatusFromBackend(pp) {
-      if (!pp) return;
-      state.paypalStatus = {
-        ...state.paypalStatus,
-        ...pp
-      };
-    }
+  if (!pp) return;
+
+  state.paypalStatus = {
+    ...state.paypalStatus,
+    ...pp,
+
+    apiConnected:
+      pp.apiConnected ??
+      (
+        pp.isRealPayPal === true &&
+        pp.connectionMode === 'CONNECTED_PAYPAL_SANDBOX_MODE'
+      ),
+
+    headerDisplayLabel:
+      pp.headerDisplayLabel ??
+      pp.connectionLabel ??
+      'Local Demo / Fixture Mode',
+
+    targetEnvironment:
+      pp.targetEnvironment ??
+      pp.environment ??
+      'LOCAL_SIMULATION'
+  };
+}
 
     async function bootstrapFromBackend() {
       loadLocalUiPrefs();
+      try {
+        if (sessionStorage.getItem('p2p_screen_locked') === 'true') {
+          lockWorkspaceScreen('Workspace remained locked across page reload.');
+        }
+      } catch {}
+
       try {
         const healthRes = await apiFetch('/api/health');
         applyPayPalStatusFromBackend(healthRes.data.paypal);
@@ -1993,12 +2218,6 @@
         populateSettingsForms();
         renderWorkspace();
         resetIdleSessionTimer();
-
-        // If credentials exist in .env but haven't been verified yet, run a silent connection check
-        // so Header and Settings never falsely claim "Connected" if credentials or network fail.
-        if (state.paypalStatus.configured && state.paypalStatus.apiConnectionStatus === 'UNVERIFIED') {
-          await runPayPalConnectionTest({ silent: true });
-        }
       } catch (err) {
         renderWorkspace();
       }
@@ -2013,23 +2232,28 @@
       const headerDot = document.getElementById('header-connection-dot');
       const headerText = document.getElementById('header-connection-text');
       const step4Badge = document.getElementById('step4-connection-badge');
+      const settingsPill = document.getElementById('settings-paypal-unified-pill');
 
       const displayLabel = pp.headerDisplayLabel || 'Local Demo / Fixture Mode';
       if (headerText) headerText.textContent = displayLabel;
       if (step4Badge) step4Badge.textContent = 'Mode: ' + displayLabel;
+      if (settingsPill) settingsPill.textContent = displayLabel;
 
       if (pp.apiConnected) {
-        headerPill.className = 'flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:opacity-90 transition';
-        headerDot.className = 'h-2 w-2 rounded-full bg-emerald-500';
+        headerPill.className = 'flex max-w-[220px] sm:max-w-none items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:opacity-90 transition';
+        headerDot.className = 'h-2 w-2 shrink-0 rounded-full bg-emerald-500';
         step4Badge.className = 'rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800';
+        if (settingsPill) settingsPill.className = 'rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800';
       } else if (pp.apiConnectionStatus === 'CONNECTION_FAILED') {
-        headerPill.className = 'flex items-center gap-2 rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 hover:opacity-90 transition';
-        headerDot.className = 'h-2 w-2 rounded-full bg-rose-500';
+        headerPill.className = 'flex max-w-[220px] sm:max-w-none items-center gap-2 rounded-full border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 hover:opacity-90 transition';
+        headerDot.className = 'h-2 w-2 shrink-0 rounded-full bg-rose-500';
         step4Badge.className = 'rounded-lg border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-800';
+        if (settingsPill) settingsPill.className = 'rounded-full border border-rose-300 bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-800';
       } else {
-        headerPill.className = 'flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:opacity-90 transition';
-        headerDot.className = 'h-2 w-2 rounded-full bg-amber-500';
+        headerPill.className = 'flex max-w-[220px] sm:max-w-none items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:opacity-90 transition';
+        headerDot.className = 'h-2 w-2 shrink-0 rounded-full bg-amber-500';
         step4Badge.className = 'rounded-lg border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800';
+        if (settingsPill) settingsPill.className = 'rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800';
       }
 
       // Update Settings Page 3-Tier Cards using the exact same backend state
@@ -2109,7 +2333,6 @@
         }
       }
 
-      // Update Settings Page 6-item Telemetry Grid
       const envEl = document.getElementById('pp-status-environment');
       const apiEl = document.getElementById('pp-status-api');
       const whEl = document.getElementById('pp-status-webhook');
@@ -2133,7 +2356,7 @@
           apiEl.textContent = 'Connection Failed (Using Local Demo Fallback)';
           apiEl.className = 'mt-0.5 font-bold text-rose-600';
         } else if (pp.configured) {
-          apiEl.textContent = 'Credentials Present — Awaiting Connection Test';
+          apiEl.textContent = 'Credentials Present — Unverified (Click Test Connection)';
           apiEl.className = 'mt-0.5 font-bold text-amber-700';
         } else {
           apiEl.textContent = 'Not Configured (Local Simulation Active)';
@@ -2144,7 +2367,7 @@
         whEl.textContent = pp.webhookStatusLabel || (pp.webhookConfigured ? 'Configured & Ready' : 'Not Configured');
       }
       if (emailEl) {
-        emailEl.textContent = pp.invoicerEmail || state.settings?.workspace?.invoicerEmail || 'alex@riverastudio.dev';
+        emailEl.textContent = pp.invoicerEmail || state.settings?.workspace?.invoicerEmail || 'demo-invoicer@sandbox.example.com';
       }
       if (lastCheckEl) {
         lastCheckEl.textContent = pp.lastSuccessfulConnectionAt
@@ -2229,9 +2452,9 @@
         if (el && val !== undefined && val !== null) el.value = String(val);
       };
 
-      setVal('pref-workspace-name', ws.workspaceName || 'Rivera Freelance Studio');
-      setVal('pref-freelancer-name', ws.freelancerName || 'Alex Rivera');
-      setVal('pref-invoicer-email', ws.invoicerEmail || 'alex@riverastudio.dev');
+      setVal('pref-workspace-name', ws.workspaceName || 'Rivera Freelance Studio (Demo)');
+      setVal('pref-freelancer-name', ws.freelancerName || 'Alex Rivera (Demo)');
+      setVal('pref-invoicer-email', ws.invoicerEmail || 'demo-invoicer@sandbox.example.com');
       setVal('pref-default-currency', ws.defaultCurrency || 'USD');
       setVal('pref-due-period', ws.defaultInvoiceDuePeriod || 'DUE_ON_RECEIPT');
       setVal('pref-date-format', ws.dateFormat || 'YYYY-MM-DD');
@@ -2253,17 +2476,25 @@
       const welcomeEl = document.getElementById('dash-welcome-heading');
       if (welcomeEl) welcomeEl.textContent = 'Welcome back, ' + firstName;
       const wsPill = document.getElementById('header-workspace-name-pill');
-      if (wsPill) wsPill.textContent = ws.workspaceName || 'Rivera Freelance Studio';
+      if (wsPill) wsPill.textContent = ws.workspaceName || 'Rivera Freelance Studio (Demo)';
       const sideName = document.getElementById('sidebar-freelancer-name');
-      if (sideName) sideName.textContent = ws.freelancerName || 'Alex Rivera';
+      if (sideName) sideName.textContent = ws.freelancerName || 'Alex Rivera (Demo)';
+      const sideDemoBadge = document.getElementById('sidebar-demo-identity-badge');
+      if (sideDemoBadge) {
+        const isDemoId = ws.isDemoIdentity !== false;
+        sideDemoBadge.textContent = isDemoId ? 'DEMO' : 'CUSTOM';
+        sideDemoBadge.className = isDemoId
+          ? 'shrink-0 rounded bg-amber-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-amber-800'
+          : 'shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-emerald-800';
+      }
       const sideEmail = document.getElementById('sidebar-invoicer-email');
-      if (sideEmail) sideEmail.textContent = ws.invoicerEmail || 'alex@riverastudio.dev';
+      if (sideEmail) sideEmail.textContent = ws.invoicerEmail || 'demo-invoicer@sandbox.example.com';
       const sideCurr = document.getElementById('sidebar-default-currency');
       if (sideCurr) sideCurr.textContent = ws.defaultCurrency || 'USD';
       const step1Curr = document.getElementById('step1-currency-label');
       if (step1Curr) step1Curr.textContent = ws.defaultCurrency || 'USD';
       const sigInput = document.getElementById('input-approver-signature');
-      if (sigInput) sigInput.value = ws.freelancerName || 'Alex Rivera';
+      if (sigInput) sigInput.value = ws.freelancerName || 'Alex Rivera (Demo)';
     }
 
     async function saveBackendSettings(sectionLabel = 'workspace') {
@@ -2272,6 +2503,7 @@
           workspaceName: document.getElementById('pref-workspace-name').value.trim(),
           freelancerName: document.getElementById('pref-freelancer-name').value.trim(),
           invoicerEmail: document.getElementById('pref-invoicer-email').value.trim(),
+          isDemoIdentity: false,
           defaultCurrency: document.getElementById('pref-default-currency').value,
           defaultInvoiceDuePeriod: document.getElementById('pref-due-period').value,
           dateFormat: document.getElementById('pref-date-format').value,
@@ -2315,18 +2547,6 @@
       }
       await saveBackendSettings('notification');
     }
-
-    // Idle Session Timeout Monitor
-    function resetIdleSessionTimer() {
-      clearTimeout(state.idleTimer);
-      const mins = Number(state.settings?.security?.sessionTimeoutMinutes || 0);
-      if (mins > 0) {
-        state.idleTimer = setTimeout(() => {
-          notify('Session Timeout Notice', 'Workspace was idle for ' + mins + ' minutes. Activity resumed.');
-        }, mins * 60 * 1000);
-      }
-    }
-    ['click', 'keydown'].forEach((evt) => window.addEventListener(evt, resetIdleSessionTimer, { passive: true }));
 
     // ----------------------------------------------------------------------
     // Security & Data Management Actions (Exports, Backups, Audit Log, Clear Demo Data)
@@ -2524,31 +2744,29 @@
     }
 
     // ----------------------------------------------------------------------
-    // 2. Navigation & Step Switching
+    // 2. Single Primary Sidebar Navigation & Step Switching
     // ----------------------------------------------------------------------
     function switchNav(navId) {
       state.activeNav = navId;
+      closeMobileSidebar();
       ['dashboard', 'projects', 'invoices', 'assistant', 'settings'].forEach((id) => {
         const sec = document.getElementById('view-' + id);
-        const btn = document.getElementById('nav-' + id);
-        const sideBtn = document.getElementById('side-nav-' + id);
+        const sideBtn = document.getElementById('nav-' + id);
         if (id === navId) {
           sec.classList.remove('hidden');
-          btn.className =
-            id === 'assistant'
-              ? 'btn-accent flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition'
-              : 'btn-accent rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition';
           if (sideBtn) {
-            sideBtn.className = 'sidebar-nav-btn btn-accent flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-white transition';
+            sideBtn.className =
+              id === 'assistant'
+                ? 'sidebar-nav-btn btn-accent flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-white transition'
+                : 'sidebar-nav-btn btn-accent flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-white transition';
           }
         } else {
           sec.classList.add('hidden');
-          btn.className =
-            id === 'assistant'
-              ? 'flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition'
-              : 'rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition';
           if (sideBtn) {
-            sideBtn.className = 'sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition';
+            sideBtn.className =
+              id === 'assistant'
+                ? 'sidebar-nav-btn flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition'
+                : 'sidebar-nav-btn flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition';
           }
         }
       });
@@ -2566,12 +2784,15 @@
       for (let i = 1; i <= 5; i++) {
         const panel = document.getElementById('step-panel-' + i);
         const tab = document.getElementById('step-tab-' + i);
+        const badge = tab.querySelector('span');
         if (i === stepNum) {
           panel.classList.remove('hidden');
-          tab.className = 'flex items-center gap-2.5 rounded-xl border border-blue-600 bg-blue-50/70 p-3 text-left transition';
+          tab.className = 'accent-selected-card flex items-center gap-2.5 rounded-xl border p-3 text-left transition';
+          if (badge) badge.className = 'btn-accent flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white';
         } else {
           panel.classList.add('hidden');
           tab.className = 'flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 transition';
+          if (badge) badge.className = 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700';
         }
       }
       renderWorkspace();
@@ -2796,7 +3017,7 @@
         notify('Confirmation Required', 'Please check the approval box to lock the scope.');
         return;
       }
-      const approverName = document.getElementById('input-approver-signature').value.trim() || state.settings?.workspace?.freelancerName || 'Alex Rivera';
+      const approverName = document.getElementById('input-approver-signature').value.trim() || state.settings?.workspace?.freelancerName || 'Alex Rivera (Demo)';
       const project = getActiveProject();
       if (!project) return;
 
@@ -2828,7 +3049,7 @@
         upsertLocalStateProject(data.project);
         renderWorkspace();
         if (data.duplicatePrevented) {
-          notify('Duplicate Invoice Prevented', data.message || 'Invoice already exists for this project.');
+          notify('Duplicate Invoice Prevented', data.message || 'Invoice already exists for this project.', 'invoiceCreated');
         } else {
           notify('Draft Invoice Created', 'Created Invoice #' + data.project.paypalInvoice.invoiceNumber + '.', 'invoiceCreated');
         }
@@ -2914,7 +3135,6 @@
     function handleDraftReminderFromStep5() {
       switchNav('assistant');
       sendAssistantPrompt('Draft a polite payment reminder.');
-      notify('Payment Reminder Drafted', 'Review and approve the reminder in the AI Assistant.', 'pendingInvoiceReminders');
     }
 
     // ----------------------------------------------------------------------
@@ -2956,6 +3176,11 @@
         upsertLocalStateProject(data.project);
         if (data.pendingApproval) {
           state.pendingApproval = data.pendingApproval;
+          if (data.pendingApproval.toolName === 'generate_payment_reminder') {
+            notify('Payment Reminder Drafted', 'Review and approve the reminder in the AI Assistant.', 'pendingInvoiceReminders');
+          } else if (data.pendingApproval.toolName === 'send_paypal_invoice') {
+            notify('Draft Invoice Ready', 'Approve sending the PayPal invoice in the AI Assistant.', 'invoiceCreated');
+          }
         }
         state.chatMessages.push({
           role: 'assistant',
@@ -2987,7 +3212,7 @@
             approvalId: pending.id,
             decision: 'APPROVE',
             args: {
-              approverName: state.settings?.workspace?.freelancerName || 'Alex Rivera',
+              approverName: state.settings?.workspace?.freelancerName || 'Alex Rivera (Demo)',
               allowSimulatedFixture: !state.paypalStatus.apiConnected
             }
           }
@@ -3000,9 +3225,15 @@
           timestamp: new Date().toISOString()
         });
         renderWorkspace();
-        notify('Action Approved & Executed', 'Completed ' + pending.toolName + '().');
+        const notifCategory =
+          pending.toolName === 'send_paypal_invoice' || pending.toolName === 'create_paypal_invoice'
+            ? 'invoiceCreated'
+            : pending.toolName === 'generate_payment_reminder'
+            ? 'pendingInvoiceReminders'
+            : null;
+        notify('Action Approved & Executed', 'Completed ' + pending.toolName + '().', notifCategory);
       } catch (err) {
-        notify('Approval Execution Error', err.message);
+        notify('Approval Execution Error', err.message, 'paymentVerificationFailure');
       }
     }
 
@@ -3233,9 +3464,9 @@
 
           return (
             '<div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ' +
-            (isCurrent ? 'border-blue-500 bg-blue-50/30' : 'border-slate-200 bg-white') +
+            (isCurrent ? 'accent-selected-card' : 'border-slate-200 bg-white') +
             '">' +
-            '<div>' +
+            '<div class="min-w-0">' +
             '<div class="flex flex-wrap items-center gap-2">' +
             '<span class="text-sm font-bold text-slate-900">' +
             p.scope.projectTitle +
@@ -3455,12 +3686,12 @@
       const inv = project.paypalInvoice;
       document.getElementById('step4-invoice-preview').innerHTML =
         '<div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">' +
-        '<div>' +
+        '<div class="min-w-0">' +
         '<div class="text-xs font-bold uppercase tracking-wider text-slate-400">PayPal Invoice Preview</div>' +
         '<h3 class="mt-0.5 text-base font-bold text-slate-900">' +
         project.scope.projectTitle +
         '</h3>' +
-        '<p class="text-xs text-slate-600">Bill To: <strong>' +
+        '<p class="break-all text-xs text-slate-600">Bill To: <strong>' +
         project.scope.clientName +
         '</strong> (' +
         project.scope.clientEmail +
@@ -3481,11 +3712,11 @@
         (project.scope.lineItems || [])
           .map(
             (li) =>
-              '<div class="flex justify-between text-slate-700"><span>' +
+              '<div class="flex justify-between gap-2 text-slate-700"><span>' +
               li.name +
               ' (×' +
               li.quantity +
-              ')</span><span class="font-semibold">' +
+              ')</span><span class="shrink-0 font-semibold">' +
               (project.scope.currency || 'USD') +
               ' $' +
               (Number(li.quantity || 1) * Number(li.unitPrice || 0)).toFixed(2) +
@@ -3517,7 +3748,7 @@
           ' (#' +
           inv.invoiceNumber +
           ')</div>' +
-          '<div class="mt-0.5 text-[11px] text-slate-500">ID: ' +
+          '<div class="mt-0.5 break-all text-[11px] text-slate-500">ID: ' +
           inv.invoiceId +
           '</div></div>' +
           '<div class="rounded-xl border border-slate-200 bg-slate-50 p-4">' +
@@ -3542,7 +3773,7 @@
           '</div></div></div>' +
           '<div class="mt-4 rounded-xl border border-slate-200 p-4 text-xs">' +
           '<div class="font-semibold text-slate-800">Client Payment Link:</div>' +
-          '<div class="mt-1 font-mono text-slate-600">' +
+          '<div class="mt-1 break-all font-mono text-slate-600">' +
           (inv.isFixture
             ? 'Simulated Fixture Preview (' + inv.invoiceId + ') — Connect valid PayPal Sandbox credentials in server .env to generate a live sandbox.paypal.com payer link.'
             : '<a href="' + inv.payerViewUrl + '" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">' + inv.payerViewUrl + '</a>') +
@@ -3569,7 +3800,14 @@
         );
       }
     }
-
+function formatAssistantMessage(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
     function renderAssistantView(project) {
       const chatBox = document.getElementById('assistant-chat-history');
       const firstName = (state.settings?.workspace?.freelancerName || 'Alex').split(' ')[0];
@@ -3585,9 +3823,9 @@
           .map((m) =>
             m.role === 'user'
               ? '<div class="btn-accent ml-8 rounded-xl bg-[#0070ba] p-3 text-xs text-white">' + m.text + '</div>'
-              : '<div class="mr-6 whitespace-pre-line rounded-xl bg-white p-3.5 text-xs text-slate-800 shadow-sm ring-1 ring-slate-200">' +
-                m.text +
-                '</div>'
+              : '<div class="mr-6 rounded-xl bg-white p-3.5 text-xs text-slate-800 shadow-sm ring-1 ring-slate-200">' +
+              formatAssistantMessage(m.text) +
+              '</div>'
           )
           .join('');
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -3641,7 +3879,7 @@
             '<p class="mt-1 text-slate-700">' +
             l.reasoningSummary +
             '</p>' +
-            '<div class="mt-1.5 rounded bg-white p-2 font-mono text-[10px] text-slate-600 ring-1 ring-slate-200/70">' +
+            '<div class="mt-1.5 break-all rounded bg-white p-2 font-mono text-[10px] text-slate-600 ring-1 ring-slate-200/70">' +
             'Args: ' +
             JSON.stringify(l.toolArguments) +
             '<br/>Result: ' +

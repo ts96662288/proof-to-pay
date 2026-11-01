@@ -1,13 +1,13 @@
 /**
- * Proof-to-Pay v3.2 — Persistent Freelancer Project & Workspace Settings Store (`src/store.mjs`)
+ * Proof-to-Pay v3.2.0 — Persistent Freelancer Project & Workspace Settings Store (`src/store.mjs`)
  *
  * Ensures that:
  * 1. Project data, pending approvals, locked scope hashes, PayPal invoice references,
  *    processed webhook event IDs, and audit/execution logs are atomically persisted to disk (`data/projects.json`).
- * 2. Demo projects (`isDemo: true`) are explicitly distinguished from real freelancer workspace projects (`isDemo: false`)
- *    so clearing demo data never deletes real user projects.
- * 3. Business-critical Workspace Preferences, Notification Settings, and Security Settings are persisted
- *    to disk (`data/settings.json`), with full support for JSON/CSV export and backup/restore snapshots.
+ * 2. A valid empty `projects.json` array (`[]`) remains empty (`[]`) across restarts and is NEVER overwritten
+ *    with demo projects unless `projects.json` does not exist yet (fresh installation) or `resetToDemoSeed()` is explicitly called.
+ * 3. Demo workspace identity (`isDemoIdentity: true`) and demo projects (`isDemo: true`) are clearly labeled as demo data,
+ *    and existing user preferences in `data/settings.json` are never silently overwritten.
  */
 
 import fs from 'node:fs';
@@ -21,13 +21,14 @@ import { ValidationError } from './schema.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_DATA_PATH = path.resolve(__dirname, '../data/projects.json');
 export const DEFAULT_OWNER_ID = 'freelancer-alex-rivera';
+export const APP_VERSION = '3.2.0';
 
 export const DEMO_BRIEFS = [
   {
     id: 'demo-startup-landing',
     channel: 'WhatsApp',
     label: 'Startup Landing Page ($450 — Unclear Copywriting & Revision Limit)',
-    clientName: 'Jordan Vance (NovaPulse Startup)',
+    clientName: 'Jordan Vance (NovaPulse Startup — Demo)',
     clientEmail: 'jordan.vance-buyer@sandbox.paypal.com',
     projectTitle: 'Startup Landing Page (3 Sections)',
     proposedBudget: 450,
@@ -38,7 +39,7 @@ export const DEMO_BRIEFS = [
     id: 'demo-saas-ui-kit',
     channel: 'Slack',
     label: 'SaaS Brand & Figma UI Kit ($850 — Missing Revision Cap & Assets)',
-    clientName: 'Marcus Chen (VectorFlow Labs)',
+    clientName: 'Marcus Chen (VectorFlow Labs — Demo)',
     clientEmail: 'marcus.chen-buyer@sandbox.paypal.com',
     projectTitle: 'VectorFlow Brand Identity & Figma UI Kit',
     proposedBudget: 850,
@@ -49,7 +50,7 @@ export const DEMO_BRIEFS = [
     id: 'demo-shopify-redesign',
     channel: 'Email',
     label: 'E-Commerce Mobile Product Page Redesign ($1,200 — Unclear Backend Scope)',
-    clientName: 'Elena Rostova (Lumen Studio)',
+    clientName: 'Elena Rostova (Lumen Studio — Demo)',
     clientEmail: 'elena.rostova-buyer@sandbox.paypal.com',
     projectTitle: 'Mobile Product Page & Cart Drawer Redesign',
     proposedBudget: 1200,
@@ -60,9 +61,10 @@ export const DEMO_BRIEFS = [
 
 export const DEFAULT_WORKSPACE_SETTINGS = Object.freeze({
   workspace: {
-    workspaceName: 'Rivera Freelance Studio',
-    freelancerName: 'Alex Rivera',
-    invoicerEmail: 'alex@riverastudio.dev',
+    workspaceName: 'Rivera Freelance Studio (Demo)',
+    freelancerName: 'Alex Rivera (Demo)',
+    invoicerEmail: 'demo-invoicer@sandbox.example.com',
+    isDemoIdentity: true,
     defaultCurrency: 'USD',
     defaultInvoiceDuePeriod: 'DUE_ON_RECEIPT',
     dateFormat: 'YYYY-MM-DD',
@@ -96,17 +98,23 @@ export function validateWorkspaceSettingsInput(input = {}, current = DEFAULT_WOR
   const notifIn = input.notifications || {};
   const secIn = input.security || {};
 
-  const workspaceName = String(wsIn.workspaceName ?? current.workspace.workspaceName ?? 'Rivera Freelance Studio').trim();
+  const workspaceName = String(
+    wsIn.workspaceName ?? current.workspace.workspaceName ?? DEFAULT_WORKSPACE_SETTINGS.workspace.workspaceName
+  ).trim();
   if (!workspaceName || workspaceName.length > 120) {
     throw new ValidationError('Workspace name must be between 1 and 120 characters.', ['workspaceName']);
   }
 
-  const freelancerName = String(wsIn.freelancerName ?? current.workspace.freelancerName ?? 'Alex Rivera').trim();
+  const freelancerName = String(
+    wsIn.freelancerName ?? current.workspace.freelancerName ?? DEFAULT_WORKSPACE_SETTINGS.workspace.freelancerName
+  ).trim();
   if (!freelancerName || freelancerName.length > 120) {
     throw new ValidationError('Freelancer / business name must be between 1 and 120 characters.', ['freelancerName']);
   }
 
-  const invoicerEmail = String(wsIn.invoicerEmail ?? current.workspace.invoicerEmail ?? 'alex@riverastudio.dev').trim();
+  const invoicerEmail = String(
+    wsIn.invoicerEmail ?? current.workspace.invoicerEmail ?? DEFAULT_WORKSPACE_SETTINGS.workspace.invoicerEmail
+  ).trim();
   if (invoicerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invoicerEmail)) {
     throw new ValidationError('Invoicer email must be a valid email address.', ['invoicerEmail']);
   }
@@ -149,11 +157,22 @@ export function validateWorkspaceSettingsInput(input = {}, current = DEFAULT_WOR
     throw new ValidationError('Session timeout must be between 0 and 1440 minutes.', ['sessionTimeoutMinutes']);
   }
 
+  // Determine whether identity is still the untouched demo identity or user-customized
+  const isDefaultDemoStrings =
+    workspaceName === DEFAULT_WORKSPACE_SETTINGS.workspace.workspaceName &&
+    freelancerName === DEFAULT_WORKSPACE_SETTINGS.workspace.freelancerName &&
+    invoicerEmail === DEFAULT_WORKSPACE_SETTINGS.workspace.invoicerEmail;
+  const isDemoIdentity =
+    wsIn.isDemoIdentity !== undefined
+      ? Boolean(wsIn.isDemoIdentity)
+      : isDefaultDemoStrings && Boolean(current.workspace?.isDemoIdentity ?? true);
+
   return {
     workspace: {
       workspaceName,
       freelancerName,
       invoicerEmail,
+      isDemoIdentity,
       defaultCurrency,
       defaultInvoiceDuePeriod,
       dateFormat,
@@ -200,6 +219,7 @@ export class ProjectStore {
         const rawSettings = JSON.parse(fs.readFileSync(this.settingsPath, 'utf8'));
         this.settings = validateWorkspaceSettingsInput(rawSettings, DEFAULT_WORKSPACE_SETTINGS);
       } catch {
+        // Keep in-memory fallback without overwriting existing file if parse failed
         this.settings = structuredClone(DEFAULT_WORKSPACE_SETTINGS);
       }
     } else {
@@ -210,7 +230,9 @@ export class ProjectStore {
       try {
         const raw = fs.readFileSync(this.filePath, 'utf8');
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        // CRITICAL FIX: A valid empty array `[]` must remain empty `[]`!
+        // Never re-seed demo projects when the user intentionally has an empty project list.
+        if (Array.isArray(parsed)) {
           this.projects = parsed.map((p) => ({
             ...p,
             ownerId: p.ownerId || DEFAULT_OWNER_ID,
@@ -223,9 +245,10 @@ export class ProjectStore {
           return;
         }
       } catch {
-        // Re-seed if file is empty or unreadable
+        // Re-seed only if the file is unreadable/corrupted
       }
     }
+    // Only seed demo data on a genuinely fresh installation when projects.json does not exist yet
     this.resetToDemoSeed();
   }
 
@@ -242,7 +265,12 @@ export class ProjectStore {
   updateSettings(input) {
     this.settings = validateWorkspaceSettingsInput(input, this.settings);
     this._saveSettings();
-    this.recordSystemAudit('WORKSPACE_SETTINGS_UPDATED', 'FREELANCER', 'SETTINGS_API', `Updated workspace settings (${this.settings.workspace.workspaceName}, ${this.settings.workspace.defaultCurrency}).`);
+    this.recordSystemAudit(
+      'WORKSPACE_SETTINGS_UPDATED',
+      'FREELANCER',
+      'SETTINGS_API',
+      `Updated workspace settings (${this.settings.workspace.workspaceName}, ${this.settings.workspace.defaultCurrency}).`
+    );
     return this.settings;
   }
 
@@ -306,6 +334,7 @@ export class ProjectStore {
 
   /**
    * Clears ONLY demo projects (`isDemo === true`), strictly preserving real workspace projects (`isDemo === false`).
+   * If no real projects exist, `projects.json` is saved as `[]` and remains `[]` across server restarts.
    */
   clearDemoProjects(ownerId = DEFAULT_OWNER_ID) {
     const beforeCount = this.projects.length;
@@ -322,13 +351,18 @@ export class ProjectStore {
 
   createBackupSnapshot(ownerId = DEFAULT_OWNER_ID) {
     const snapshot = {
-      backupVersion: '3.2',
+      backupVersion: APP_VERSION,
       createdAt: new Date().toISOString(),
       settings: this.settings,
       projects: this.list(ownerId)
     };
     fs.writeFileSync(this.backupPath, JSON.stringify(snapshot, null, 2), 'utf8');
-    this.recordSystemAudit('WORKSPACE_BACKUP_CREATED', 'FREELANCER', 'BACKUP_ENGINE', `Created backup snapshot with ${snapshot.projects.length} project(s).`);
+    this.recordSystemAudit(
+      'WORKSPACE_BACKUP_CREATED',
+      'FREELANCER',
+      'BACKUP_ENGINE',
+      `Created backup snapshot with ${snapshot.projects.length} project(s).`
+    );
     return snapshot;
   }
 
@@ -348,7 +382,12 @@ export class ProjectStore {
       this.projects = data.projects;
       this.save();
     }
-    this.recordSystemAudit('WORKSPACE_BACKUP_RESTORED', 'FREELANCER', 'BACKUP_ENGINE', `Restored ${this.projects.length} project(s) from backup snapshot.`);
+    this.recordSystemAudit(
+      'WORKSPACE_BACKUP_RESTORED',
+      'FREELANCER',
+      'BACKUP_ENGINE',
+      `Restored ${this.projects.length} project(s) from backup snapshot.`
+    );
     return {
       settings: this.settings,
       projects: this.projects
@@ -357,7 +396,7 @@ export class ProjectStore {
 
   getAllAuditLogs(ownerId = null) {
     const projects = this.list(ownerId);
-    const entries = projects.flatMap((p) =>
+    const projectEntries = projects.flatMap((p) =>
       (p.auditTrail || []).map((a) => ({
         ...a,
         projectId: p.id,
@@ -366,13 +405,18 @@ export class ProjectStore {
         isDemo: Boolean(p.isDemo)
       }))
     );
-    return entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const seenIds = new Set(projectEntries.map((e) => e.id));
+    const standaloneSystemEntries = this.systemAuditLog.filter((e) => !seenIds.has(e.id));
+    return [...projectEntries, ...standaloneSystemEntries].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
   }
 
   exportAsJson(ownerId = null) {
     const projects = this.list(ownerId);
     return {
-      exportFormat: 'Proof-to-Pay Workspace Export v3.2',
+      exportFormat: `Proof-to-Pay Workspace Export v${APP_VERSION}`,
+      version: APP_VERSION,
       exportedAt: new Date().toISOString(),
       workspaceSettings: this.settings,
       summary: {
