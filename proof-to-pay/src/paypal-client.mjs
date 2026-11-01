@@ -2,9 +2,17 @@
  * Proof-to-Pay — Official PayPal Invoicing REST API Client (`src/paypal-client.mjs`)
  *
  * Implements:
- * 1. Genuine OAuth 2.0 authentication (`POST /v1/oauth2/token`) with token caching & automatic expiry refresh.
- *    Never logs or exposes Client Secret or access tokens.
- * 2. Complete PayPal Invoicing v2 API operations:
+ * 1. Single Backend Source of Truth for PayPal Environment & Connection Status:
+ *    - Correctly distinguishes:
+ *      1) `LOCAL_DEMO_FIXTURE_MODE` (Simulated local fixture mode when credentials are not configured)
+ *      2) `CONNECTED_PAYPAL_SANDBOX_MODE` (PayPal Sandbox mode at `https://api-m.sandbox.paypal.com`)
+ *      3) `LIVE_PAYPAL_MODE` (Live production mode at `https://api-m.paypal.com`, only when `PAYPAL_ENV=live`)
+ *    - Does NOT mark PayPal as API-connected merely because credentials exist in `.env`.
+ *    - Tracks `apiConnected`, `apiConnectionStatus`, `webhookConfigured`, `webhookVerificationStatus`,
+ *      `lastCheckedAt`, `lastSuccessfulConnectionAt`, and `lastError` separately.
+ * 2. Genuine OAuth 2.0 authentication (`POST /v1/oauth2/token`) with token caching & automatic expiry refresh.
+ *    Never logs or exposes Client Secret or OAuth access tokens.
+ * 3. Complete PayPal Invoicing v2 API operations:
  *    - `generateNextInvoiceNumber` (`POST /v2/invoicing/generate-next-invoice-number`)
  *    - `createDraftInvoice` (`POST /v2/invoicing/invoices`)
  *    - `getInvoice` (`GET /v2/invoicing/invoices/{id}`)
@@ -13,10 +21,6 @@
  *    - `cancelSentInvoice` (`POST /v2/invoicing/invoices/{id}/cancel`)
  *    - `testConnection` (Authenticates + performs safe non-financial API check)
  *    - `verifyWebhookSignature` (`POST /v1/notifications/verify-webhook-signature`)
- * 3. Distinct Operating Modes:
- *    - `LOCAL_DEMO_FIXTURE_MODE` (Simulated local development only; never treated as genuine payment)
- *    - `CONNECTED_PAYPAL_SANDBOX_MODE` (Uses real PayPal Sandbox API calls at `https://api-m.sandbox.paypal.com`)
- *    - `LIVE_PAYPAL_MODE` (Requires explicit production configuration `PAYPAL_ENV=live`; never activates automatically)
  */
 
 import crypto from 'node:crypto';
@@ -64,7 +68,7 @@ export class PayPalSandboxClient {
     this.customFetch = config.fetch || fetch;
 
     this.invoicerConfig = {
-      email: config.invoicerEmail || process.env.PAYPAL_INVOICER_EMAIL || '',
+      email: config.invoicerEmail || process.env.PAYPAL_INVOICER_EMAIL || 'alex@riverastudio.dev',
       givenName: config.invoicerGivenName || process.env.PAYPAL_INVOICER_GIVEN_NAME || 'Alex',
       surname: config.invoicerSurname || process.env.PAYPAL_INVOICER_SURNAME || 'Rivera',
       businessName:
@@ -73,6 +77,14 @@ export class PayPalSandboxClient {
 
     /** @type {{ token: string, expiresAt: number, expiresAtMs: number, expiresInSeconds: number, appId: string|null, debugId: string|null } | null} */
     this._tokenCache = null;
+
+    // Live connectivity & webhook verification telemetry (Single Source of Truth)
+    this._apiVerified = false;
+    this._lastCheckedAt = null;
+    this._lastSuccessfulConnectionAt = null;
+    this._lastConnectionError = null;
+    this._lastWebhookVerifiedAt = null;
+    this._webhookVerifiedCount = 0;
 
     /**
      * Strictly isolated store for `LOCAL_DEMO_FIXTURE_MODE` only.
@@ -83,6 +95,20 @@ export class PayPalSandboxClient {
     this._fixtureInvoiceSeq = 1042;
   }
 
+  updateInvoicerConfig(updates = {}) {
+    if (updates.email !== undefined && updates.email.trim()) {
+      this.invoicerConfig.email = updates.email.trim();
+    }
+    if (updates.businessName !== undefined && updates.businessName.trim()) {
+      this.invoicerConfig.businessName = updates.businessName.trim();
+    }
+    if (updates.freelancerName !== undefined && updates.freelancerName.trim()) {
+      const parts = updates.freelancerName.trim().split(/\s+/);
+      this.invoicerConfig.givenName = parts[0] || 'Alex';
+      this.invoicerConfig.surname = parts.slice(1).join(' ') || 'Rivera';
+    }
+  }
+
   hasRealCredentials() {
     return Boolean(
       this.clientId &&
@@ -90,6 +116,11 @@ export class PayPalSandboxClient {
         !this.clientId.includes('your_paypal_sandbox') &&
         !this.clientSecret.includes('your_paypal_sandbox')
     );
+  }
+
+  isLiveEnvironmentConfigured() {
+    const isLiveUrl = this.baseUrl.includes('api-m.paypal.com') && !this.baseUrl.includes('sandbox');
+    return Boolean(isLiveUrl && (this.envMode === 'live' || this.envMode === 'production'));
   }
 
   getConnectionMode() {
@@ -105,15 +136,14 @@ export class PayPalSandboxClient {
       };
     }
 
-    const isLiveUrl = this.baseUrl.includes('api-m.paypal.com') && !this.baseUrl.includes('sandbox');
-    if (isLiveUrl && (this.envMode === 'live' || this.envMode === 'production')) {
+    if (this.isLiveEnvironmentConfigured()) {
       return {
         mode: PAYPAL_CONNECTION_MODES.LIVE_PRODUCTION,
         label: 'Live PayPal Mode',
         isRealPayPal: true,
         isSandbox: false,
         isLive: true,
-        description: 'Connected to live PayPal production API (api-m.paypal.com) using server-side credentials.'
+        description: 'Configured for live PayPal production API (api-m.paypal.com) using server-side credentials.'
       };
     }
 
@@ -123,31 +153,94 @@ export class PayPalSandboxClient {
       isRealPayPal: true,
       isSandbox: true,
       isLive: false,
-      description: 'Connected to official PayPal Sandbox API (api-m.sandbox.paypal.com) using server-side OAuth 2.0.'
+      description: 'Configured for official PayPal Sandbox API (api-m.sandbox.paypal.com) using server-side OAuth 2.0.'
     };
   }
 
   /**
-   * Returns safe credential & mode metadata. Never exposes clientSecret or accessToken.
+   * Single Backend Source of Truth for PayPal Environment, API Connection, and Webhook Status.
+   * Never marks `apiConnected: true` merely because credentials exist in `.env`.
+   * Never exposes clientSecret or accessToken.
    */
   getCredentialStatus() {
     const conn = this.getConnectionMode();
+    const configured = this.hasRealCredentials();
+    const webhookConfigured = Boolean(this.webhookId && !this.webhookId.includes('your_paypal_sandbox'));
+    const identicalWarning =
+      configured && this.clientId === this.clientSecret
+        ? 'PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in .env are identical strings. PayPal Sandbox requires the distinct Secret value associated with your Client ID.'
+        : null;
+
+    let apiConnectionStatus = 'NOT_CONFIGURED';
+    let activeTier = 'LOCAL_DEMO_FIXTURE_MODE';
+    let headerDisplayLabel = 'Local Demo / Fixture Mode';
+    let statusTone = 'amber'; // 'emerald' | 'amber' | 'rose'
+
+    if (configured) {
+      if (this._apiVerified) {
+        apiConnectionStatus = 'CONNECTED';
+        activeTier = conn.mode;
+        headerDisplayLabel = conn.isLive ? 'Live PayPal Mode (Connected)' : 'Connected PayPal Sandbox Mode';
+        statusTone = 'emerald';
+      } else if (this._lastConnectionError) {
+        apiConnectionStatus = 'CONNECTION_FAILED';
+        activeTier = PAYPAL_CONNECTION_MODES.LOCAL_DEMO_FIXTURE;
+        headerDisplayLabel = conn.isLive
+          ? 'Live PayPal — Connection Error (Demo Fallback)'
+          : 'PayPal Sandbox — Connection Error (Demo Fallback)';
+        statusTone = 'rose';
+      } else {
+        apiConnectionStatus = 'UNVERIFIED';
+        activeTier = PAYPAL_CONNECTION_MODES.LOCAL_DEMO_FIXTURE;
+        headerDisplayLabel = conn.isLive
+          ? 'Live PayPal — Unverified (Test Connection)'
+          : 'PayPal Sandbox — Unverified (Test Connection)';
+        statusTone = 'amber';
+      }
+    }
+
+    let webhookVerificationStatus = 'DISABLED_IN_DEMO';
+    let webhookStatusLabel = 'Simulated Guard Only (Local Demo Mode)';
+    if (configured) {
+      if (webhookConfigured) {
+        webhookVerificationStatus =
+          this._webhookVerifiedCount > 0 ? 'VERIFIED_EVENTS_RECEIVED' : 'CONFIGURED_READY';
+        webhookStatusLabel =
+          this._webhookVerifiedCount > 0
+            ? `Verified (${this._webhookVerifiedCount} authentic event(s))`
+            : 'Webhook ID Configured & Verification Ready';
+      } else {
+        webhookVerificationStatus = 'MISSING_WEBHOOK_ID';
+        webhookStatusLabel = 'Not Configured (Set PAYPAL_WEBHOOK_ID in .env)';
+      }
+    }
+
     return {
-      configured: this.hasRealCredentials(),
+      configured,
       mode: conn.mode,
       connectionMode: conn.mode,
+      activeTier,
       connectionLabel: conn.label,
+      headerDisplayLabel,
+      statusTone,
       connectionDescription: conn.description,
-      isRealPayPal: conn.isRealPayPal,
+      isRealPayPal: configured && this._apiVerified,
+      credentialsPresent: configured,
+      apiConnected: configured && this._apiVerified,
+      apiConnectionStatus,
       environment: conn.isLive ? 'LIVE' : conn.isSandbox ? 'SANDBOX' : 'LOCAL_SIMULATION',
+      targetEnvironment: conn.isLive ? 'LIVE' : 'SANDBOX',
       baseUrl: this.baseUrl,
       apiBaseUrl: this.baseUrl,
-      webhookConfigured: Boolean(this.webhookId && !this.webhookId.includes('your_paypal_sandbox')),
-      clientIdPreview: this.hasRealCredentials() ? `${this.clientId.slice(0, 4)}...${this.clientId.slice(-4)}` : null,
-      identicalIdAndSecretWarning:
-        this.hasRealCredentials() && this.clientId === this.clientSecret
-          ? 'Warning: PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in .env are identical strings. PayPal Sandbox requires the distinct Secret value associated with the Client ID.'
-          : null,
+      webhookConfigured,
+      webhookVerificationStatus,
+      webhookStatusLabel,
+      lastWebhookVerifiedAt: this._lastWebhookVerifiedAt,
+      lastCheckedAt: this._lastCheckedAt,
+      lastSuccessfulConnectionAt: this._lastSuccessfulConnectionAt,
+      lastError: this._lastConnectionError,
+      clientIdPreview: configured ? `${this.clientId.slice(0, 4)}...${this.clientId.slice(-4)}` : null,
+      identicalIdAndSecretWarning: identicalWarning,
       invoicerBusinessName: this.invoicerConfig.businessName,
       invoicerEmail: this.invoicerConfig.email || 'Not configured in .env'
     };
@@ -170,6 +263,7 @@ export class PayPalSandboxClient {
         this._tokenCache.expiresAt ?? Infinity
       );
       if (!forceRefresh && effectiveExpiry > now + 30_000) {
+        this._apiVerified = true;
         return {
           token: this._tokenCache.token,
           cached: true,
@@ -181,6 +275,9 @@ export class PayPalSandboxClient {
     }
 
     const basicAuth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+    const checkedIso = new Date().toISOString();
+    this._lastCheckedAt = checkedIso;
+
     let response;
     try {
       response = await this.customFetch(`${this.baseUrl}/v1/oauth2/token`, {
@@ -194,8 +291,10 @@ export class PayPalSandboxClient {
         body: 'grant_type=client_credentials'
       });
     } catch (netErr) {
+      this._apiVerified = false;
+      this._lastConnectionError = `Unable to reach PayPal API server (${this.baseUrl}): ${netErr.message}`;
       throw new PayPalApiError(
-        `Unable to reach PayPal API server (${this.baseUrl}): ${netErr.message}`,
+        this._lastConnectionError,
         503,
         { networkError: netErr.code || netErr.message },
         null
@@ -206,10 +305,12 @@ export class PayPalSandboxClient {
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.access_token) {
       this._tokenCache = null;
+      this._apiVerified = false;
+      this._lastConnectionError = `PayPal OAuth2 authentication failed (${response.status}): ${
+        data.error_description || data.error || data.message || 'Invalid client credentials'
+      }`;
       throw new PayPalApiError(
-        `PayPal OAuth2 authentication failed (${response.status}): ${
-          data.error_description || data.error || data.message || 'Invalid client credentials'
-        }`,
+        this._lastConnectionError,
         response.status || 401,
         {
           error: data.error || 'OAUTH_ERROR',
@@ -230,6 +331,10 @@ export class PayPalSandboxClient {
       expiresAt: expiresAtMs,
       expiresAtMs
     };
+    this._apiVerified = true;
+    this._lastSuccessfulConnectionAt = checkedIso;
+    this._lastConnectionError = null;
+
     return {
       token: this._tokenCache.token,
       cached: false,
@@ -248,32 +353,44 @@ export class PayPalSandboxClient {
    * Performs a safe, non-financial connectivity check against PayPal Sandbox:
    * 1. Authenticates via OAuth 2.0 (`POST /v1/oauth2/token`)
    * 2. Performs a safe verification request (`POST /v2/invoicing/generate-next-invoice-number`)
-   * Returns connection status and environment without exposing secrets or tokens.
+   * Returns connection status and unified `paypalStatus` without exposing secrets or tokens.
    */
   async testConnection() {
-    const status = this.getCredentialStatus();
+    this._lastCheckedAt = new Date().toISOString();
     if (!this.hasRealCredentials()) {
-      const msg = 'PayPal Sandbox credentials (PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET) are not configured in .env.';
+      this._apiVerified = false;
+      const msg =
+        'PayPal Sandbox credentials (PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET) are not configured in server .env. Running in Local Demo / Fixture Mode.';
+      this._lastConnectionError = msg;
+      const status = this.getCredentialStatus();
       return {
         ok: false,
         connected: false,
         connectionMode: status.connectionMode,
+        activeTier: status.activeTier,
         environment: status.environment,
         baseUrl: this.baseUrl,
         apiBaseUrl: this.baseUrl,
-        verifiedAt: new Date().toISOString(),
+        verifiedAt: this._lastCheckedAt,
         message: msg,
-        error: msg
+        error: msg,
+        paypal: status
       };
     }
 
     try {
       const tokenMeta = await this.getAccessTokenWithMeta(false);
       const nextNum = await this.generateNextInvoiceNumber({ allowDevFixture: false });
+      this._apiVerified = true;
+      this._lastSuccessfulConnectionAt = new Date().toISOString();
+      this._lastConnectionError = null;
+      const status = this.getCredentialStatus();
+
       return {
         ok: true,
         connected: true,
         connectionMode: status.connectionMode,
+        activeTier: status.activeTier,
         environment: status.environment,
         baseUrl: this.baseUrl,
         apiBaseUrl: this.baseUrl,
@@ -285,25 +402,32 @@ export class PayPalSandboxClient {
         nextInvoiceNumber: nextNum.invoiceNumber,
         sampleNextInvoiceNumber: nextNum.invoiceNumber,
         verificationDebugId: nextNum.paypalDebugId,
-        verifiedAt: new Date().toISOString(),
-        message: `Connected to ${status.connectionLabel} (${this.baseUrl}). Verified OAuth 2.0 token and Invoicing v2 endpoint.`,
-        error: null
+        verifiedAt: this._lastSuccessfulConnectionAt,
+        message: `Connected to ${status.connectionLabel} (${this.baseUrl}). OAuth 2.0 and Invoicing v2 API verified.`,
+        error: null,
+        paypal: status
       };
     } catch (err) {
+      this._apiVerified = false;
+      this._lastConnectionError = err.message;
+      const status = this.getCredentialStatus();
+
       return {
         ok: false,
         connected: false,
         connectionMode: status.connectionMode,
+        activeTier: status.activeTier,
         environment: status.environment,
         baseUrl: this.baseUrl,
         apiBaseUrl: this.baseUrl,
         statusCode: err.statusCode || 502,
         paypalDebugId: err.paypalDebugId || null,
         identicalIdAndSecretWarning: status.identicalIdAndSecretWarning,
-        verifiedAt: new Date().toISOString(),
+        verifiedAt: this._lastCheckedAt,
         message: err.message,
         error: err.message,
-        errorDetails: err.details || null
+        errorDetails: err.details || null,
+        paypal: status
       };
     }
   }
@@ -323,34 +447,50 @@ export class PayPalSandboxClient {
       throw new MissingPayPalCredentialsError();
     }
 
-    const token = await this.getAccessToken();
-    const response = await this.customFetch(`${this.baseUrl}/v2/invoicing/generate-next-invoice-number`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    try {
+      const token = await this.getAccessToken();
+      const response = await this.customFetch(`${this.baseUrl}/v2/invoicing/generate-next-invoice-number`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const debugId = response.headers?.get?.('paypal-debug-id') || null;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        this._apiVerified = false;
+        this._lastConnectionError = `PayPal Generate Next Invoice Number failed (${response.status}): ${
+          data.message || JSON.stringify(data)
+        }`;
+        throw new PayPalApiError(this._lastConnectionError, response.status, data, debugId);
       }
-    });
 
-    const debugId = response.headers?.get?.('paypal-debug-id') || null;
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new PayPalApiError(
-        `PayPal Generate Next Invoice Number failed (${response.status}): ${data.message || JSON.stringify(data)}`,
-        response.status,
-        data,
-        debugId
-      );
+      this._apiVerified = true;
+      this._lastSuccessfulConnectionAt = new Date().toISOString();
+      this._lastConnectionError = null;
+      const conn = this.getConnectionMode();
+      return {
+        invoiceNumber: data.invoice_number || `INV-${Date.now().toString().slice(-6)}`,
+        connectionMode: conn.mode,
+        environment: conn.mode,
+        isFixture: false,
+        paypalDebugId: debugId
+      };
+    } catch (err) {
+      if (options.allowDevFixture) {
+        this._fixtureInvoiceSeq += 1;
+        return {
+          invoiceNumber: `INV-SIM-${this._fixtureInvoiceSeq}`,
+          connectionMode: PAYPAL_CONNECTION_MODES.LOCAL_DEMO_FIXTURE,
+          environment: 'LOCAL_DEMO_FIXTURE_MODE',
+          isFixture: true,
+          paypalDebugId: null
+        };
+      }
+      throw err;
     }
-
-    const conn = this.getConnectionMode();
-    return {
-      invoiceNumber: data.invoice_number || `INV-${Date.now().toString().slice(-6)}`,
-      connectionMode: conn.mode,
-      environment: conn.mode,
-      isFixture: false,
-      paypalDebugId: debugId
-    };
   }
 
   extractInvoiceLinks(links = []) {
@@ -372,75 +512,88 @@ export class PayPalSandboxClient {
       throw new MissingPayPalCredentialsError();
     }
 
-    const token = await this.getAccessToken();
-    const requestId = options.idempotencyKey || `p2p-draft-${crypto.randomUUID()}`;
-    const response = await this.customFetch(`${this.baseUrl}/v2/invoicing/invoices`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation',
-        'PayPal-Request-Id': requestId
-      },
-      body: JSON.stringify(invoicePayload)
-    });
+    try {
+      const token = await this.getAccessToken();
+      const requestId = options.idempotencyKey || `p2p-draft-${crypto.randomUUID()}`;
+      const response = await this.customFetch(`${this.baseUrl}/v2/invoicing/invoices`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+          'PayPal-Request-Id': requestId
+        },
+        body: JSON.stringify(invoicePayload)
+      });
 
-    const debugId = response.headers?.get?.('paypal-debug-id') || null;
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new PayPalApiError(
-        `PayPal Create Draft Invoice failed (${response.status}): ${data.message || JSON.stringify(data)}`,
-        response.status,
-        data,
-        debugId
-      );
+      const debugId = response.headers?.get?.('paypal-debug-id') || null;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new PayPalApiError(
+          `PayPal Create Draft Invoice failed (${response.status}): ${data.message || JSON.stringify(data)}`,
+          response.status,
+          data,
+          debugId
+        );
+      }
+
+      let invoiceId = data.id;
+      if (!invoiceId && data.href) {
+        invoiceId = data.href.split('/').pop();
+      }
+      if (!invoiceId && Array.isArray(data.links)) {
+        const selfHref = data.links.find((l) => l.rel === 'self')?.href;
+        if (selfHref) invoiceId = selfHref.split('/').pop();
+      }
+
+      const canonical = invoiceId ? await this.getInvoice(invoiceId) : null;
+      const invoiceResource = canonical?.raw || data;
+      const links = this.extractInvoiceLinks(invoiceResource.links);
+      const conn = this.getConnectionMode();
+
+      this._apiVerified = true;
+      this._lastSuccessfulConnectionAt = new Date().toISOString();
+
+      return {
+        invoiceId: invoiceId || invoiceResource.id,
+        invoiceNumber: invoiceResource?.detail?.invoice_number || invoicePayload?.detail?.invoice_number,
+        status: invoiceResource.status || 'DRAFT',
+        connectionMode: conn.mode,
+        environment: conn.mode,
+        isFixture: false,
+        paypalDebugId: debugId || canonical?.paypalDebugId || null,
+        currency: invoiceResource?.amount?.currency_code || invoicePayload.detail.currency_code,
+        totalAmount: invoiceResource?.amount?.value || invoicePayload.items?.[0]?.unit_amount?.value,
+        dueAmount: invoiceResource?.due_amount?.value || invoiceResource?.amount?.value,
+        payerViewUrl: invoiceResource?.detail?.metadata?.recipient_view_url || links.payerViewUrl,
+        selfUrl: links.selfUrl,
+        createdAt: invoiceResource?.detail?.metadata?.create_time || new Date().toISOString(),
+        raw: invoiceResource
+      };
+    } catch (err) {
+      if (options.allowDevFixture) {
+        return this._createFixtureDraftInvoice(invoicePayload);
+      }
+      throw err;
     }
-
-    let invoiceId = data.id;
-    if (!invoiceId && data.href) {
-      invoiceId = data.href.split('/').pop();
-    }
-    if (!invoiceId && Array.isArray(data.links)) {
-      const selfHref = data.links.find((l) => l.rel === 'self')?.href;
-      if (selfHref) invoiceId = selfHref.split('/').pop();
-    }
-
-    const canonical = invoiceId ? await this.getInvoice(invoiceId) : null;
-    const invoiceResource = canonical?.raw || data;
-    const links = this.extractInvoiceLinks(invoiceResource.links);
-    const conn = this.getConnectionMode();
-
-    return {
-      invoiceId: invoiceId || invoiceResource.id,
-      invoiceNumber: invoiceResource?.detail?.invoice_number || invoicePayload?.detail?.invoice_number,
-      status: invoiceResource.status || 'DRAFT',
-      connectionMode: conn.mode,
-      environment: conn.mode,
-      isFixture: false,
-      paypalDebugId: debugId || canonical?.paypalDebugId || null,
-      currency: invoiceResource?.amount?.currency_code || invoicePayload.detail.currency_code,
-      totalAmount: invoiceResource?.amount?.value || invoicePayload.items?.[0]?.unit_amount?.value,
-      dueAmount: invoiceResource?.due_amount?.value || invoiceResource?.amount?.value,
-      payerViewUrl: invoiceResource?.detail?.metadata?.recipient_view_url || links.payerViewUrl,
-      selfUrl: links.selfUrl,
-      createdAt: invoiceResource?.detail?.metadata?.create_time || new Date().toISOString(),
-      raw: invoiceResource
-    };
   }
 
   async sendInvoice(invoiceId, options = {}) {
+    if (String(invoiceId).startsWith('SIM-INV-')) {
+      if (options.allowDevFixture) {
+        return this._sendFixtureInvoice(invoiceId);
+      }
+      throw new PayPalApiError(
+        'Cannot send a simulated fixture invoice through the live PayPal Sandbox API.',
+        400
+      );
+    }
+
     if (!this.hasRealCredentials()) {
       if (options.allowDevFixture) {
         return this._sendFixtureInvoice(invoiceId);
       }
       throw new MissingPayPalCredentialsError();
-    }
-
-    if (String(invoiceId).startsWith('SIM-INV-')) {
-      throw new PayPalApiError(
-        'Cannot send a simulated fixture invoice through the live PayPal Sandbox API.',
-        400
-      );
     }
 
     const token = await this.getAccessToken();
@@ -490,26 +643,27 @@ export class PayPalSandboxClient {
   }
 
   async sendInvoiceReminder(invoiceId, options = {}) {
-    if (!this.hasRealCredentials()) {
-      if (options.allowDevFixture) {
-        const existing = this._fixtureInvoices.get(invoiceId);
-        if (!existing) {
-          throw new PayPalApiError(`Simulated invoice ${invoiceId} does not exist.`, 404);
-        }
-        const now = new Date().toISOString();
-        existing.lastReminderSentAt = now;
-        existing.reminderCount = (existing.reminderCount || 0) + 1;
-        this._fixtureInvoices.set(invoiceId, existing);
-        return {
-          invoiceId,
-          remindedAt: now,
-          reminderCount: existing.reminderCount,
-          environment: PAYPAL_CONNECTION_MODES.LOCAL_DEMO_FIXTURE,
-          isFixture: true,
-          subject: options.subject || 'Polite Payment Reminder',
-          note: options.note || ''
-        };
+    if (String(invoiceId).startsWith('SIM-INV-') || (!this.hasRealCredentials() && options.allowDevFixture)) {
+      const existing = this._fixtureInvoices.get(invoiceId);
+      if (!existing) {
+        throw new PayPalApiError(`Simulated invoice ${invoiceId} does not exist.`, 404);
       }
+      const now = new Date().toISOString();
+      existing.lastReminderSentAt = now;
+      existing.reminderCount = (existing.reminderCount || 0) + 1;
+      this._fixtureInvoices.set(invoiceId, existing);
+      return {
+        invoiceId,
+        remindedAt: now,
+        reminderCount: existing.reminderCount,
+        environment: PAYPAL_CONNECTION_MODES.LOCAL_DEMO_FIXTURE,
+        isFixture: true,
+        subject: options.subject || 'Polite Payment Reminder',
+        note: options.note || ''
+      };
+    }
+
+    if (!this.hasRealCredentials()) {
       throw new MissingPayPalCredentialsError();
     }
 
@@ -562,19 +716,20 @@ export class PayPalSandboxClient {
    * Cancels a sent invoice (`POST /v2/invoicing/invoices/{id}/cancel`).
    */
   async cancelSentInvoice(invoiceId, options = {}) {
-    if (!this.hasRealCredentials()) {
-      if (options.allowDevFixture) {
-        const existing = this._fixtureInvoices.get(invoiceId);
-        if (!existing) {
-          throw new PayPalApiError(`Simulated invoice ${invoiceId} does not exist.`, 404);
-        }
-        const now = new Date().toISOString();
-        existing.status = 'CANCELLED';
-        existing.lastUpdatedAt = now;
-        existing.raw.status = 'CANCELLED';
-        this._fixtureInvoices.set(invoiceId, existing);
-        return existing;
+    if (String(invoiceId).startsWith('SIM-INV-') || (!this.hasRealCredentials() && options.allowDevFixture)) {
+      const existing = this._fixtureInvoices.get(invoiceId);
+      if (!existing) {
+        throw new PayPalApiError(`Simulated invoice ${invoiceId} does not exist.`, 404);
       }
+      const now = new Date().toISOString();
+      existing.status = 'CANCELLED';
+      existing.lastUpdatedAt = now;
+      existing.raw.status = 'CANCELLED';
+      this._fixtureInvoices.set(invoiceId, existing);
+      return existing;
+    }
+
+    if (!this.hasRealCredentials()) {
       throw new MissingPayPalCredentialsError();
     }
 
@@ -655,6 +810,9 @@ export class PayPalSandboxClient {
     const metadata = data?.detail?.metadata || {};
     const conn = this.getConnectionMode();
 
+    this._apiVerified = true;
+    this._lastSuccessfulConnectionAt = new Date().toISOString();
+
     return {
       invoiceId: data.id || invoiceId,
       invoiceNumber: data?.detail?.invoice_number || null,
@@ -729,6 +887,11 @@ export class PayPalSandboxClient {
 
     const data = await response.json().catch(() => ({}));
     const isSuccess = response.ok && data.verification_status === 'SUCCESS';
+
+    if (isSuccess) {
+      this._lastWebhookVerifiedAt = new Date().toISOString();
+      this._webhookVerifiedCount += 1;
+    }
 
     return {
       verified: isSuccess,

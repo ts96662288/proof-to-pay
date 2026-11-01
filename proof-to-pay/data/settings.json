@@ -1,0 +1,24 @@
+{
+  "workspace": {
+    "workspaceName": "Rivera Freelance Studio",
+    "freelancerName": "Alex Rivera",
+    "invoicerEmail": "alex@riverastudio.dev",
+    "defaultCurrency": "USD",
+    "defaultInvoiceDuePeriod": "DUE_ON_RECEIPT",
+    "dateFormat": "YYYY-MM-DD",
+    "timeZone": "America/New_York",
+    "defaultTaxPercentage": 0
+  },
+  "notifications": {
+    "invoiceCreated": true,
+    "invoicePaid": true,
+    "paymentVerificationFailure": true,
+    "webhookFailure": true,
+    "pendingInvoiceReminders": true
+  },
+  "security": {
+    "sessionTimeoutMinutes": 30,
+    "requireConfirmationOnDestructiveActions": true
+  },
+  "updatedAt": "2026-11-01T05:30:29.960Z"
+}

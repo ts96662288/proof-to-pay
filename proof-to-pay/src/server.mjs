@@ -1,21 +1,20 @@
 /**
- * Proof-to-Pay v3.1 — Secure HTTP Server & REST API Controller (`src/server.mjs`)
+ * Proof-to-Pay v3.2 — Secure HTTP Server & REST API Controller (`src/server.mjs`)
  *
- * Implements all 12 required backend endpoints + PayPal connection verification + security hardening:
- * - `GET  /api/health`
- * - `GET  /api/paypal/test-connection` (and `POST /api/paypal/test-connection`)
- * - `GET  /api/projects`
+ * Implements all core & SaaS Workspace endpoints + security hardening:
+ * - `GET  /api/health` (Single source of truth for PayPal status, AI provider, and Workspace Settings)
+ * - `GET  /api/paypal/test-connection` & `POST /api/paypal/test-connection`
+ * - `GET  /api/settings` & `PUT /api/settings` (Persistent Workspace Preferences, Notifications, Security)
+ * - `GET  /api/audit-logs` (Unified Audit Trail across projects)
+ * - `GET  /api/export/json` & `GET /api/export/csv` (Sanitized Workspace Data Exports)
+ * - `POST /api/backup/create` & `POST /api/backup/restore` (Workspace Snapshot Backup & Restore)
+ * - `POST /api/projects/clear-demo` (Confirmed Demo-Only Data Clearing — never deletes real projects)
+ * - `GET  /api/projects` & `POST /api/projects/reset`
  * - `POST /api/projects/extract`
- * - `POST /api/agent/chat`
- * - `POST /api/agent/tool`
- * - `POST /api/agent/approve`
- * - `PUT  /api/projects/:id/scope`
- * - `POST /api/projects/:id/approve`
- * - `POST /api/projects/:id/paypal/draft`
- * - `POST /api/projects/:id/paypal/send`
- * - `POST /api/projects/:id/paypal/remind`
- * - `POST /api/projects/:id/paypal/cancel`
- * - `POST /api/projects/:id/paypal/sync`
+ * - `POST /api/agent/chat`, `POST /api/agent/tool`, `POST /api/agent/approve`
+ * - `PUT  /api/projects/:id/scope`, `POST /api/projects/:id/approve`
+ * - `POST /api/projects/:id/paypal/draft`, `POST /api/projects/:id/paypal/send`,
+ *   `POST /api/projects/:id/paypal/remind`, `POST /api/projects/:id/paypal/cancel`, `POST /api/projects/:id/paypal/sync`
  * - `POST /api/webhooks/paypal`
  */
 
@@ -82,6 +81,16 @@ export function createAppServer(deps = {}) {
       .filter(Boolean)
   );
 
+  // Sync initial saved workspace invoicer preferences with PayPal client
+  const savedWs = store.getSettings()?.workspace;
+  if (savedWs) {
+    paypalClient.updateInvoicerConfig({
+      businessName: savedWs.workspaceName,
+      freelancerName: savedWs.freelancerName,
+      email: process.env.PAYPAL_INVOICER_EMAIL || savedWs.invoicerEmail
+    });
+  }
+
   /** @type {Map<string, { count: number, resetAt: number }>} */
   const rateLimitBuckets = new Map();
 
@@ -105,7 +114,7 @@ export function createAppServer(deps = {}) {
       res.setHeader('Access-Control-Allow-Origin', requestOrigin);
       res.setHeader('Vary', 'Origin');
     }
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader(
       'Access-Control-Allow-Headers',
       'Content-Type, Authorization, X-Freelancer-Key, X-Freelancer-Id'
@@ -149,7 +158,7 @@ export function createAppServer(deps = {}) {
     }
 
     try {
-      // Endpoint 1: GET /api/health
+      // Endpoint 1: GET /api/health (Single Source of Truth for PayPal, AI, Tools, and Settings)
       if (req.method === 'GET' && pathname === '/api/health') {
         const geminiConfigured = Boolean(
           process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes('your_')
@@ -163,6 +172,7 @@ export function createAppServer(deps = {}) {
           service: 'Proof-to-Pay Freelancer Business Assistant',
           timestamp: new Date().toISOString(),
           paypal: paypalClient.getCredentialStatus(),
+          settings: store.getSettings(),
           agentTools: AGENT_TOOL_DEFINITIONS,
           ai: {
             configured: aiConfigured,
@@ -185,6 +195,101 @@ export function createAppServer(deps = {}) {
         return sendJson(res, result.ok ? 200 : 502, result);
       }
 
+      // Workspace Settings Endpoints (`GET /api/settings` & `PUT /api/settings`)
+      if (req.method === 'GET' && pathname === '/api/settings') {
+        return sendJson(res, 200, {
+          settings: store.getSettings(),
+          paypal: paypalClient.getCredentialStatus()
+        });
+      }
+
+      if (req.method === 'PUT' && pathname === '/api/settings') {
+        const body = await readJsonBody(req);
+        const updatedSettings = store.updateSettings(body);
+        paypalClient.updateInvoicerConfig({
+          businessName: updatedSettings.workspace.workspaceName,
+          freelancerName: updatedSettings.workspace.freelancerName,
+          email: process.env.PAYPAL_INVOICER_EMAIL || updatedSettings.workspace.invoicerEmail
+        });
+        return sendJson(res, 200, {
+          settings: updatedSettings,
+          paypal: paypalClient.getCredentialStatus()
+        });
+      }
+
+      // Unified Audit Logs Endpoint (`GET /api/audit-logs`)
+      if (req.method === 'GET' && pathname === '/api/audit-logs') {
+        return sendJson(res, 200, {
+          auditLogs: store.getAllAuditLogs(reqOwnerId)
+        });
+      }
+
+      // Workspace Data Export Endpoints (`GET /api/export/json` & `GET /api/export/csv`)
+      if (req.method === 'GET' && pathname === '/api/export/json') {
+        const exportPayload = store.exportAsJson(reqOwnerId);
+        res.writeHead(200, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="proof-to-pay-workspace.json"'
+        });
+        res.end(JSON.stringify(exportPayload, null, 2));
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/api/export/csv') {
+        const csvContent = store.exportAsCsv(reqOwnerId);
+        res.writeHead(200, {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="proof-to-pay-workspace.csv"'
+        });
+        res.end(csvContent);
+        return;
+      }
+
+      // Workspace Backup & Restore Endpoints (`POST /api/backup/create` & `POST /api/backup/restore`)
+      if (req.method === 'POST' && pathname === '/api/backup/create') {
+        const snapshot = store.createBackupSnapshot(reqOwnerId);
+        return sendJson(res, 200, {
+          ok: true,
+          createdAt: snapshot.createdAt,
+          projectCount: snapshot.projects.length,
+          snapshot
+        });
+      }
+
+      if (req.method === 'POST' && pathname === '/api/backup/restore') {
+        const body = await readJsonBody(req);
+        if (body.confirmRestore !== true) {
+          throw new ValidationError('Explicit confirmation (confirmRestore: true) is required before restoring a backup.', [
+            'confirmRestore'
+          ]);
+        }
+        const restored = store.restoreBackupSnapshot(body.snapshot || null);
+        return sendJson(res, 200, {
+          ok: true,
+          settings: restored.settings,
+          projects: store.list(reqOwnerId)
+        });
+      }
+
+      // Safe Demo Data Clearing (`POST /api/projects/clear-demo` — never deletes real projects)
+      if (req.method === 'POST' && pathname === '/api/projects/clear-demo') {
+        const body = await readJsonBody(req);
+        if (body.confirmClearDemo !== true) {
+          throw new ValidationError(
+            'Explicit confirmation (confirmClearDemo: true) is required before clearing demo projects.',
+            ['confirmClearDemo']
+          );
+        }
+        const result = store.clearDemoProjects(reqOwnerId);
+        store.recordSystemAudit(
+          'DEMO_DATA_CLEARED',
+          'FREELANCER',
+          'DATA_MANAGEMENT',
+          `Cleared ${result.removedDemoCount} demo project(s); preserved ${result.preservedRealCount} real workspace project(s).`
+        );
+        return sendJson(res, 200, result);
+      }
+
       // Presets helper
       if (req.method === 'GET' && pathname === '/api/presets') {
         return sendJson(res, 200, { presets: DEMO_BRIEFS });
@@ -204,11 +309,41 @@ export function createAppServer(deps = {}) {
       if (req.method === 'POST' && pathname === '/api/projects/extract') {
         const body = await readJsonBody(req);
         const validatedInput = validateBriefInput(body);
+        const wsPrefs = store.getSettings()?.workspace || {};
         const proposedBudget = body.proposedBudget ? Number(body.proposedBudget) : null;
         const { scope, analysisDetails, extractionMeta } = await extractStructuredScope({
           ...validatedInput,
           proposedBudget
         });
+
+        // Apply saved workspace defaults if not explicitly overridden
+        if (wsPrefs.defaultCurrency) {
+          scope.currency = wsPrefs.defaultCurrency;
+        }
+        if (wsPrefs.defaultInvoiceDuePeriod && !body.paymentTerms) {
+          scope.paymentTerms = wsPrefs.defaultInvoiceDuePeriod;
+        }
+        if (Number(wsPrefs.defaultTaxPercentage) > 0 && body.applyDefaultTax !== false) {
+          const taxPct = Number(wsPrefs.defaultTaxPercentage);
+          const baseTotal = scope.lineItems.reduce(
+            (sum, li) => sum + Number(li.quantity || 1) * Number(li.unitPrice || 0),
+            0
+          );
+          const taxAmount = Number(((baseTotal * taxPct) / 100).toFixed(2));
+          if (taxAmount > 0) {
+            scope.lineItems.push({
+              id: `ITEM-TAX`,
+              name: `Tax (${taxPct}%)`,
+              description: `Default workspace tax (${taxPct}%)`,
+              quantity: '1',
+              unitPrice: taxAmount,
+              subtotal: taxAmount,
+              confidence: 'EXPLICIT'
+            });
+            scope.totalAmount = Number((baseTotal + taxAmount).toFixed(2));
+          }
+        }
+
         const project = createProjectRecord({
           rawBrief: validatedInput.rawBrief,
           extractedScope: scope,
@@ -217,6 +352,9 @@ export function createAppServer(deps = {}) {
           proposedBudget
         });
         project.ownerId = reqOwnerId;
+        const isDemoBrief = DEMO_BRIEFS.some((d) => d.rawBrief.trim() === validatedInput.rawBrief.trim());
+        project.isDemo = body.isDemo !== undefined ? Boolean(body.isDemo) : isDemoBrief;
+
         await executeAgentTool({
           toolName: 'extract_project_requirements',
           args: { rawBrief: validatedInput.rawBrief, proposedBudget },
@@ -230,6 +368,13 @@ export function createAppServer(deps = {}) {
           paypalClient,
           reasoningSummary: 'Automatically ran identify_ambiguities() to flag unclear requirements and missing info.'
         });
+        // Re-apply workspace currency/due period after tool run
+        if (wsPrefs.defaultCurrency) {
+          project.scope.currency = wsPrefs.defaultCurrency;
+        }
+        if (wsPrefs.defaultInvoiceDuePeriod && !body.paymentTerms) {
+          project.scope.paymentTerms = wsPrefs.defaultInvoiceDuePeriod;
+        }
         store.upsert(project);
         return sendJson(res, 201, { project });
       }
@@ -259,8 +404,6 @@ export function createAppServer(deps = {}) {
           return sendJson(res, 404, { error: 'Project not found.' });
         }
         verifyProjectOwnership(project, reqOwnerId);
-        // Note: Direct calls to /api/agent/tool NEVER receive verifiedApprovalId, so sensitive tools
-        // always create a PENDING_HUMAN_APPROVAL record and cannot bypass human approval.
         const outcome = await executeAgentTool({
           toolName: body.toolName,
           args: body.args || {},
@@ -335,7 +478,8 @@ export function createAppServer(deps = {}) {
           return sendJson(res, 200, {
             project: updatedProject,
             duplicatePrevented: Boolean(result.duplicatePrevented),
-            message: result.message || null
+            message: result.message || null,
+            paypal: paypalClient.getCredentialStatus()
           });
         }
 
@@ -347,7 +491,10 @@ export function createAppServer(deps = {}) {
             allowDevFixture: Boolean(body.allowDevFixture)
           });
           store.upsert(updated);
-          return sendJson(res, 200, { project: updated });
+          return sendJson(res, 200, {
+            project: updated,
+            paypal: paypalClient.getCredentialStatus()
+          });
         }
 
         if (req.method === 'POST' && subRoute === 'paypal/remind') {
@@ -380,7 +527,10 @@ export function createAppServer(deps = {}) {
             allowDevFixture: Boolean(body.allowDevFixture)
           });
           store.upsert(updated);
-          return sendJson(res, 200, { project: updated });
+          return sendJson(res, 200, {
+            project: updated,
+            paypal: paypalClient.getCredentialStatus()
+          });
         }
       }
 
@@ -491,9 +641,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   server.listen(port, () => {
     const status = paypalClient.getCredentialStatus();
     console.log(`\n======================================================================`);
-    console.log(`  Proof-to-Pay v3.1 — AI Freelancer Business Assistant`);
+    console.log(`  Proof-to-Pay v3.2 — AI Freelancer Fintech SaaS Platform`);
     console.log(`  Local URL:        http://localhost:${port}`);
-    console.log(`  PayPal Mode:      ${status.connectionLabel}`);
+    console.log(`  PayPal Status:    ${status.headerDisplayLabel}`);
     console.log(`  Webhook Endpoint: POST http://localhost:${port}/api/webhooks/paypal`);
     console.log(`======================================================================\n`);
   });

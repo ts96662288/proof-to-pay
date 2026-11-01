@@ -308,6 +308,10 @@ export function buildPayPalInvoiceV2Payload(approvedScope, invoicerConfig = {}, 
       },
       unit_of_measure: 'QUANTITY'
     })),
+    amount: {
+      currency_code: approvedScope.currency,
+      value: Number(approvedScope.totalAmount).toFixed(2)
+    },
     configuration: {
       partial_payment: {
         allow_partial_payment: false
